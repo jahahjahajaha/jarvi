@@ -1,0 +1,322 @@
+{
+	"player": {
+		"noplayer": "<a:cross:1342050022954373121> | <a:No_no_no:1341819205187797044> **No active player!**",
+		"addq": "<:Song_add_in_queue:1341967211790860331> | **Track Queued** `#{position}`",
+		"song": "<:Music_heart:1340942147247013990> Track Details",
+		"addlist": "<:Playlist_add:1341976109037649991> | Added **{tracks} tracks** from `{name}`",
+		"nomusic": "<a:cross:1342050022954373121> | <a:Mic_blocked_gif:1342003041301168160> **No music playing!**",
+		"anotherVc": "<a:cross:1342050022954373121> | Already in <#{vc}>! <a:disappear_with_heart:1341840907615469600>",
+		"noVc": "<a:cross:1342050022954373121> | <:NA:1340621370631131209> **Join a voice channel first!**",
+		"vcmust": "<:Electric_Stovetop:1341471291454001252> | **Join VC** to use this!",
+		"samevc": "<a:Sorry_uwu:1341819679227908237> | Join <#{vc}> to control! <a:Link:1341469206478061589>",
+		"cmderr": "<a:cross_gif:1342050022954373121> | **Command Failed** - Use `{prefix}help`",
+		"epause": "<:Pause:1342000617119289465> | **Auto-Paused** - Empty channel! <a:Im_out:1341840659266408591>",
+		"eresume": "<:Resume:1342001378033139743> | **Resuming** <a:CD_playing_gif:1342194315404902411>",
+		"track": {
+			"error": "<a:cross:1342050022954373121> | **Corrupted Track** <:Distort:1340568710984761448>",
+			"end": "<a:Chec_kmark:1340583433298251846> | **Queue Ended** <:Music:1340944686340243497>",
+			"dc": "<:Stop_1:1342000640767037461> | Disconnected! <a:Ban_gif:1341843623590756403>",
+			"move": "<:FastForward:1342000653828100180> | Moved to {vc}"
+		},
+		"noplaying": "<a:cross:1342050022954373121> | **Nothing Playing!**"
+	},
+	"events": {
+		"msgcrt": {
+			"embed": "<:Info:1340943602855186522> **Embed Alert**",
+			"embed2": "<a:cross:1342050022954373121> | Missing **SEND_MESSAGES** in <#{channelId}>",
+			"embed3": "<a:cross:1342050022954373121> | Need **EMBED_LINKS** for {cmdname}",
+			"embed4": "<:Plus:1340935740825141259> | **Specify Song** `{prefix}play <song>`",
+			"embed5": "<a:cross:1342050022954373121> | **Enable EMBED_LINKS**"
+		},
+		"inter": {
+			"noplayer": "<a:cross:1342050022954373121> | **No Active Player**",
+			"noparam": "<:NA:1340621370631131209> | **Missing Parameters!**",
+			"use": "Use `{prefix}{cmdname}` properly!"
+		}
+	},
+	"prams": {
+		"connect": "<a:cross:1342050022954373121> | Bot needs **CONNECT/SPEAK**!",
+		"vc": "<a:cross:1342050022954373121> | Can't join your VC!",
+		"manage": "<:Config:1340947204222750780> | **Manage Server** required!",
+		"prams": "<a:cross:1342050022954373121> | Insufficient permissions!"
+	},
+	"button": {
+		"invite": "<:List_1:1342011384409358378> Invite",
+		"support": "<a:Information_gif:1341473866551394416> Support",
+		"github": "<:Cmd:1341469332969885736> GitHub",
+		"wrongbut": "<a:cross:1342050022954373121> | Only {Tag} can click!",
+		"vcmst": "<a:cross:1342050022954373121> | Join {Vc} first!"
+	},
+	"cmd": {
+		"247": {
+			"name": "247",
+			"des": "<:24:1340940709074833459> 24/7 Mode",
+			"aliases": [
+				"24h",
+				"24/7",
+				"24*7"
+			],
+			"on": "<a:Chec_kmark:1340583433298251846> | 24/7 **Enabled** <a:infinite_gif:1341844261003460618>",
+			"off": "<:NA:1340621370631131209> | 24/7 **Disabled**"
+		},
+		"help": {
+			"name": "help",
+			"des": "<:Help:1340939355035799603> Command Help",
+			"aliases": [
+				"h"
+			],
+			"title": "<:Jarvi_Logo:1340405392307388468> {bot} Help",
+			"main": "<a:A_girl_Listening_music_Vibegif:1341799217898983454> **Hey <@{user}>!**\nI'm **Jarvi** - Ultimate Music Bot\n\n<:Music:1340944686340243497> **Music** | <:Info:1340943602855186522> **Info**\n<:Playlist_play:1341971070944677979> **Playlists** | <:Config:1340947204222750780> **Settings**\n\nSelect category below ↓",
+			"footer": "Requested By",
+			"label": "Home",
+			"label2": "Music",
+			"label3": "Info",
+			"label4": "Config",
+			"label5": "Playlist",
+			"but": {
+				"title": "<:Music:1340944686340243497> Music Commands",
+				"title2": "<:Info:1340943602855186522> Info Commands",
+				"title3": "<:Config:1340947204222750780> Config Commands",
+				"title4": "<:Playlist_play:1341971070944677979> Playlist Commands",
+				"footer": "Total {cmd} music commands",
+				"footer2": "Total {cmd} info commands",
+				"footer3": "Total {cmd} config commands",
+				"footer4": "Total {cmd} playlist commands"
+			}
+		},
+		"invite": {
+			"name": "invite",
+			"des": "<a:Link:1341469206478061589> Invite Bot",
+			"aliases": [
+				"addme"
+			],
+			"author": "<:Jarvi_Logo:1340405392307388468> Jarvi",
+			"field": "Invite me: [Click Here]({invite})"
+		},
+		"node": {
+			"name": "node",
+			"des": "<a:Statistics:1341471915893723146> Node Status",
+			"aliases": []
+		},
+		"ping": {
+			"name": "ping",
+			"des": "<a:Ping:1341813752282222704> Check Latency",
+			"content": "<a:Running_time:1341816641700499537> Pinging...",
+			"author": "<a:Pong:1341814258685444240> Pong!",
+			"bot": "Bot: **{bot}ms**",
+			"api": "API: **{api}ms**",
+			"footer": "Requested by"
+		},
+		"about": {
+			"name": "about",
+			"des": "<:Info:1340943602855186522> Bot Info",
+			"aliases": [
+				"botinfo"
+			],
+			"main": "**{client.user.username}** by The Extremez Coder\nOpen-source music project <:Github:1341469332969885736>",
+			"author": "<:Jarvi_Logo:1340405392307388468> Jarvi"
+		},
+		"play": {
+			"name": "play",
+			"des": "<:Play:1342000604242776094> Play Music",
+			"aliases": [
+				"p"
+			],
+			"embed": "<a:CD_playing_gif:1342194315404902411> **Now Playing**\n{SongTitle}",
+			"slash": {
+				"name": "input",
+				"des": "Song name/URL",
+				"error": "<a:cross:1342050022954373121> | Invalid query!",
+				"nores": "<a:cross:1342050022954373121> | No results!",
+				"embed": "<:Song_add_in_queue:1341967211790860331> Added to queue",
+				"embed1": "<:Playlist_add:1341976109037649991> Playlist added"
+			}
+		},
+		"autoplay": {
+			"name": "autoplay",
+			"des": "<:Replay:1342003814483361892> Toggle Autoplay",
+			"aliases": [
+				"ap"
+			],
+			"on": "<a:Chec_kmark:1340583433298251846> | Autoplay **ON**",
+			"off": "<:NA:1340621370631131209> | Autoplay **OFF**"
+		},
+		"clearqueue": {
+			"name": "clearqueue",
+			"des": "<:Reset:1340406899451101194> Clear Queue",
+			"aliases": [
+				"cq"
+			],
+			"remove": "<a:Chec_kmark:1340583433298251846> | Cleared **{count}** tracks!"
+		},
+		"join": {
+			"name": "join",
+			"des": "<:Mic:1342001835510206515> Join VC",
+			"aliases": [
+				"j"
+			],
+			"embed": "<a:Chec_kmark:1340583433298251846> | Joined <#{vcId}>"
+		},
+		"leave": {
+			"name": "leave",
+			"des": "<:Stop_1:1342000640767037461> Leave VC",
+			"aliases": [
+				"dc"
+			],
+			"embed": "<:Wave:1341840907615469600> | Goodbye!"
+		},
+		"loop": {
+			"name": "loop",
+			"des": "<:Repeat:1342004067253096530> Loop Modes",
+			"aliases": [
+				"L"
+			],
+			"embed": "<:Repeat:1342004067253096530> Loop Queue: **{queueRepeat}**",
+			"embed1": "<:Repeat_once:1342217159207682048> Loop Track: **{trackRepeat}**"
+		},
+		"lyrics": {
+			"name": "lyrics",
+			"des": "<:List_1:1342011384409358378> Song Lyrics",
+			"aliases": [
+				"ly"
+			],
+			"embed": "<a:cross:1342050022954373121> | Lyrics unavailable"
+		},
+		"nowplaying": {
+			"name": "nowplaying",
+			"des": "<a:CD_playing_gif:1342194315404902411> Current Track",
+			"aliases": [
+				"np"
+			],
+			"embed": "<:Music_heart:1340942147247013990> **Now Playing**\n{SongTitle} - [{SongTime}] <@{SongReq}>\n\n{Bar}"
+		},
+		"pause": {
+			"name": "pause",
+			"des": "<:Pause:1342000617119289465> Pause Music",
+			"aliases": [],
+			"embed": "<:Pause_1:1342218544078786734> Already paused!",
+			"embed2": "<:Pause:1342000617119289465> | Paused {SongTitle}"
+		},
+		"queue": {
+			"name": "queue",
+			"des": "<:List_1:1342011384409358378> Show Queue",
+			"aliases": [],
+			"embed": "<a:CD_playing_gif:1342194315404902411> **Now Playing**\n{SongTitle}",
+			"embed2": "**Queue** ({total} tracks)\n{Page}",
+			"footer": "Page {currentPage}/{totalPages}",
+			"empty": "<:NA:1340621370631131209> | Queue is empty!",
+			"use": "cmd.queue.use"
+		},
+		"remove": {
+			"name": "remove",
+			"des": "<:Song_removed:1341822080836178012> Remove Track",
+			"aliases": [],
+			"embed": "<a:cross:1342050022954373121> | Invalid position!",
+			"embed2": "<:Song_removed:1341822080836178012> | Removed #{Number}"
+		},
+		"resume": {
+			"name": "resume",
+			"des": "<:Resume:1342001378033139743> Resume Music",
+			"aliases": [],
+			"embed": "<:Play_1:1342221466044989463> Already playing!",
+			"embed2": "<:Resume:1342001378033139743> | Resumed!"
+		},
+		"search": {
+			"name": "search",
+			"des": "<:Search:1342005854777507892> Search Tracks",
+			"aliases": [],
+			"embed": "<a:Running_time:1341816641700499537> Searching...",
+			"title": "<:List_1:1342011384409358378> Select Track",
+			"queue": "<:Song_add_in_queue:1341967211790860331> Added!"
+		},
+		"seek": {
+			"name": "seek",
+			"des": "<:Forward_10:1342005193180713011> Seek Track",
+			"aliases": [],
+			"embed": "<a:cross:1342050022954373121> | Invalid duration!",
+			"rewind": "<:Rewind:1342000662824620122> Rewound",
+			"forward": "<:FastForward:1342000653828100180> Forwarded"
+		},
+		"shuffle": {
+			"name": "shuffle",
+			"des": "<:Shuffle:1342004289899462666> Shuffle Queue",
+			"aliases": [],
+			"embed": "<a:Chec_kmark:1340583433298251846> | Shuffled **{count}** tracks!"
+		},
+		"skip": {
+			"name": "skip",
+			"des": "<:End_or_skip:1342005854777507892> Skip Track",
+			"aliases": [],
+			"embed": "<:FastForward:1342000653828100180> | Skipped!"
+		},
+		"skipto": {
+			"name": "skipto",
+			"des": "<:Skip_to_Start:1342005845654769745> Jump to Track",
+			"aliases": [
+				"jump"
+			],
+			"embed": "<a:Chec_kmark:1340583433298251846> | Jumped to #{position}",
+			"embed2": "<a:cross:1342050022954373121> | Use `{prefix}skipto <number>`"
+		},
+		"stop": {
+			"name": "stop",
+			"des": "<:Stop_1:1342000640767037461> Stop Player",
+			"aliases": [],
+			"embed": "<:Stop_1:1342000640767037461> | Stopped!"
+		},
+		"vol": {
+			"name": "volume",
+			"des": "<:Boost:1340415610034589716> Adjust Volume",
+			"aliases": [
+				"v",
+				"vol"
+			],
+			"use": "<a:cross:1342050022954373121> | Use `{prefix}vol 0-100`",
+			"embed": "<:Speaker:1342222399780687894> Current: **{volume}%**",
+			"embed2": "<a:cross:1342050022954373121> | Max 100%!"
+		},
+		"grab": {
+			"name": "grab",
+			"des": "<:Save:1342004067253096530> Save Track",
+			"aliases": [
+				"save"
+			],
+			"label": "<a:Chec_kmark:1340583433298251846> Check DMs!",
+			"footer": "Requested By",
+			"details": "<:Info:1340943602855186522> Track Details"
+		},
+		"filter": {
+			"name": "filters",
+			"des": "<:Equalizer:1340423721315340401> Audio Effects",
+			"aliases": [
+				"eq",
+				"equalizer"
+			],
+			"filinfo": "<:Filter:1340944936241205278> **Select Filter:**",
+			"em1": "<:Reset:1340406899451101194> | Filters Cleared!",
+			"em7": "<:8D:1340417340214349975> | 8D Audio Activated!"
+		},
+		"prefix": {
+			"name": "setprefix",
+			"des": "<:Config:1340947204222750780> Change Prefix",
+			"aliases": [
+				"prefix"
+			],
+			"embed4": "<a:Chec_kmark:1340583433298251846> | New Prefix: `{prefix}`"
+		},
+		"playlist": {
+			"create": {
+				"mainembed": "<:Playlist_add:1341976109037649991> | Created **{name}**!"
+			},
+			"load": {
+				"mainembed": "<:Playlist_play:1341971070944677979> | Added **{count}** tracks!"
+			}
+		}
+	},
+	"lyrics": {
+		"errorNotQueue": "<a:cross:1342050022954373121> | No track playing!"
+	},
+	"but": {
+		"vcmst": "but.vcmst"
+	}
+}
