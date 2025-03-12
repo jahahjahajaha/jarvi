@@ -103,6 +103,9 @@ module.exports = class Logger {
                 return config.logs.console;
             case "boost":
                 return config.logs.boost;
+            case "serverjoin":
+            case "serverleave":
+                return config.logs.serverjoinleave;
             default:
                 return config.logs.logChannelId; // Default general logs
         }
@@ -348,38 +351,115 @@ module.exports = class Logger {
      * @param {Guild} guild - The guild that was joined
      */
     static async logServerJoin(guild) {
-        const embed = new EmbedBuilder()
-            .setColor("#45D15A")
-            .setTitle("➕ Bot Added to Server")
-            .setThumbnail(guild.iconURL({ dynamic: true }) || "https://i.imgur.com/AWGDmiu.png")
-            .addFields([
-                { name: 'Server Name', value: guild.name, inline: true },
-                { name: 'Server ID', value: guild.id, inline: true },
-                { name: 'Owner', value: `<@${guild.ownerId}> (${guild.ownerId})`, inline: true },
-                { name: 'Members', value: `${guild.memberCount} members`, inline: true },
-                { name: 'Created On', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:F>`, inline: true },
-                { name: 'Server Count', value: `${this.client.guilds.cache.size} servers`, inline: true }
-            ])
-            .setTimestamp();
-        
-        this.log({ embeds: [embed] }, "join");
-        
-        // Also send to serverjoinleave channel
-        if (config.logs.serverjoinleave) {
+        try {
+            // Fetch Guild Owner
+            const owner = await guild.fetchOwner().catch(() => null);
+
+            // Community Enabled Check
+            const isCommunity = guild.features.includes("COMMUNITY");
+            let inviteLink = "Not Available";
+
+            // Invite Link Creation
             try {
-                const joinLeaveChannel = await this.client.channels.fetch(config.logs.serverjoinleave).catch(() => null);
-                if (joinLeaveChannel) {
-                    await joinLeaveChannel.send({ 
-                        content: "🎉 **Bot joined a new server!**",
-                        embeds: [embed] 
+                const channels = guild.channels.cache;
+                let inviteChannel = channels.find(c => 
+                    c.type === 0 && // Text Channel
+                    c.permissionsFor(guild.members.me).has("CreateInstantInvite")
+                );
+
+                if (inviteChannel) {
+                    const invite = await inviteChannel.createInvite({
+                        maxAge: 0, // Permanent Invite
+                        maxUses: 0
                     });
-                    console.log(`[INFO] Server join notification sent to channel ${joinLeaveChannel.name}`);
-                } else {
-                    console.error(`[ERROR] Server join/leave channel not found: ${config.logs.serverjoinleave}`);
+                    inviteLink = invite.url;
                 }
             } catch (err) {
-                console.error(`Failed to send join log to serverjoinleave channel: ${err.message}`);
+                console.error(`Failed to create invite for ${guild.name}: ${err.message}`);
             }
+
+            // Fetching Inviter (If Available)
+            let inviter = "Unknown";
+            try {
+                const auditLogs = await guild.fetchAuditLogs({ type: 28, limit: 1 }); // 28 is BOT_ADD
+                const entry = auditLogs.entries.first();
+                if (entry) inviter = `${entry.executor.tag} (${entry.executor.id})`;
+            } catch (err) {
+                console.error(`Failed to fetch inviter for ${guild.name}: ${err.message}`);
+            }
+
+            // Create a beautiful embed for server join
+            const embed = new EmbedBuilder()
+                .setColor('#44ff44')
+                .setAuthor({ 
+                    name: `📥 Jarvi joined a New Server!`, 
+                    iconURL: this.client.user.displayAvatarURL() 
+                })
+                .setThumbnail(guild.iconURL({ dynamic: true, size: 1024 }) || this.client.user.displayAvatarURL())
+                .setDescription(`
+                    <:Jarvi_Logo:1340405392307388468> **Server Name:** \`${guild.name}\`
+                    <a:Config_gif:1340947266772533360> **Server ID:** \`${guild.id}\`
+                    ${owner ? `<a:King_mukut_gif:1342818101816856577> **Owner:** [${owner.user.tag}](https://discord.com/users/${owner.id})\n<:Id_card:1342864306441556121> **Owner ID:** \`${owner.id}\`` : ''}
+                    <a:Save_the_date_gif:1342818099610517534> **Created On:** <t:${Math.floor(guild.createdTimestamp / 1000)}:D>
+                    <a:Yellow_members_icon_gif:1342819050446782537> **Members:** \`${guild.memberCount.toLocaleString()}\`
+                    🛡 **Community Enabled:** \`${isCommunity ? "Yes ✅" : "No ❌"}\`
+                `)
+                .addFields([
+                    { 
+                        name: "📌 Server Details", 
+                        value: [
+                            `<:Chat_Bubble:1342850239886790696> **Channels:** \`${guild.channels.cache.size}\``,
+                            `<:Theatre_Mask:1342851810313900095> **Roles:** \`${guild.roles.cache.size}\``,
+                            `<a:Discord_rocket:1342842402167324806> **Boosts:** \`${guild.premiumSubscriptionCount || 0}\``
+                        ].join("\n"), 
+                        inline: true
+                    },
+                    { 
+                        name: "🔗 Invite Link", 
+                        value: inviteLink !== "Not Available" ? `[Click Here](${inviteLink})` : "Not Available", 
+                        inline: true 
+                    },
+                    { 
+                        name: "🤝 Invited By", 
+                        value: inviter, 
+                        inline: false 
+                    },
+                    { 
+                        name: "🌐 Server Count", 
+                        value: `${this.client.guilds.cache.size} servers`, 
+                        inline: false 
+                    }
+                ])
+                .setFooter({ 
+                    text: `${this.client.user.username} now in ${this.client.guilds.cache.size} servers`,
+                    iconURL: this.client.user.displayAvatarURL()
+                })
+                .setTimestamp();
+
+            // Create buttons if possible
+            let components = [];
+            if (inviteLink !== "Not Available" || owner) {
+                const buttons = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setLabel('Join Server')
+                        .setStyle(ButtonStyle.Link)
+                        .setURL(inviteLink)
+                        .setDisabled(inviteLink === "Not Available"),
+                    new ButtonBuilder()
+                        .setLabel('Owner Profile')
+                        .setStyle(ButtonStyle.Link)
+                        .setURL(owner ? `https://discord.com/users/${owner.id}` : config.bot.supportServer)
+                        .setDisabled(!owner)
+                );
+                components.push(buttons);
+            }
+
+            // Send the log specifically to the server join/leave channel
+            this.log({ embeds: [embed], components }, "serverjoin");
+            
+        } catch (error) {
+            console.error(`Error in logServerJoin: ${error.stack}`);
+            this.log(`Error logging server join: ${error.message}`, "error");
         }
     }
     
@@ -388,38 +468,43 @@ module.exports = class Logger {
      * @param {Guild} guild - The guild that was left
      */
     static async logServerLeave(guild) {
-        const embed = new EmbedBuilder()
-            .setColor("#F75C5C")
-            .setTitle("➖ Bot Removed from Server")
-            .setThumbnail(guild.iconURL({ dynamic: true }) || "https://i.imgur.com/AWGDmiu.png")
-            .addFields([
-                { name: 'Server Name', value: guild.name, inline: true },
-                { name: 'Server ID', value: guild.id, inline: true },
-                { name: 'Owner', value: `<@${guild.ownerId}> (${guild.ownerId})`, inline: true },
-                { name: 'Members', value: `${guild.memberCount} members`, inline: true },
-                { name: 'Created On', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:F>`, inline: true },
-                { name: 'Server Count', value: `${this.client.guilds.cache.size} servers`, inline: true }
-            ])
-            .setTimestamp();
-        
-        this.log({ embeds: [embed] }, "leave");
-        
-        // Also send to serverjoinleave channel
-        if (config.logs.serverjoinleave) {
-            try {
-                const joinLeaveChannel = await this.client.channels.fetch(config.logs.serverjoinleave).catch(() => null);
-                if (joinLeaveChannel) {
-                    await joinLeaveChannel.send({ 
-                        content: "😢 **Bot left a server!**",
-                        embeds: [embed] 
-                    });
-                    console.log(`[INFO] Server leave notification sent to channel ${joinLeaveChannel.name}`);
-                } else {
-                    console.error(`[ERROR] Server join/leave channel not found: ${config.logs.serverjoinleave}`);
-                }
-            } catch (err) {
-                console.error(`Failed to send leave log to serverjoinleave channel: ${err.message}`);
-            }
+        try {
+            // Create a beautiful embed for server leave
+            const embed = new EmbedBuilder()
+                .setColor('#F75C5C')
+                .setAuthor({ 
+                    name: `📤 Jarvi left a Server!`, 
+                    iconURL: this.client.user.displayAvatarURL() 
+                })
+                .setThumbnail(guild.iconURL({ dynamic: true, size: 1024 }) || this.client.user.displayAvatarURL())
+                .setDescription(`
+                    <:Jarvi_Logo:1340405392307388468> **Server Name:** \`${guild.name}\`
+                    <a:Config_gif:1340947266772533360> **Server ID:** \`${guild.id}\`
+                    <:Id_card:1342864306441556121> **Owner ID:** \`${guild.ownerId}\`
+                    <a:Save_the_date_gif:1342818099610517534> **Created On:** <t:${Math.floor(guild.createdTimestamp / 1000)}:D>
+                    <a:Yellow_members_icon_gif:1342819050446782537> **Members:** \`${guild.memberCount.toLocaleString()}\`
+                    📊 **Servers Remaining:** \`${this.client.guilds.cache.size}\`
+                `)
+                .setFooter({ 
+                    text: `${this.client.user.username} now in ${this.client.guilds.cache.size} servers`,
+                    iconURL: this.client.user.displayAvatarURL()
+                })
+                .setTimestamp();
+
+            // Create button for owner profile
+            const buttons = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setLabel('Owner Profile')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://discord.com/users/${guild.ownerId}`)
+            );
+
+            // Send the log specifically to the server join/leave channel
+            this.log({ embeds: [embed], components: [buttons] }, "serverleave");
+            
+        } catch (error) {
+            console.error(`Error in logServerLeave: ${error.stack}`);
+            this.log(`Error logging server leave: ${error.message}`, "error");
         }
     }
     
@@ -428,20 +513,141 @@ module.exports = class Logger {
      * @param {GuildMember} member - The member who boosted
      */
     static async logServerBoost(member) {
-        if (!member || !config.logs.boost) return;
+        try {
+            if (!member || !config.logs.boost) return;
+            
+            // Get boost tier information
+            const boostLevel = member.guild.premiumTier;
+            const boostCount = member.guild.premiumSubscriptionCount || 0;
+            
+            // Calculate remaining boosts for next level
+            let nextLevelBoosts = 0;
+            if (boostLevel === 0) {
+                nextLevelBoosts = 2 - boostCount; // Need 2 for Level 1
+            } else if (boostLevel === 1) {
+                nextLevelBoosts = 7 - boostCount; // Need 7 for Level 2 
+            } else if (boostLevel === 2) {
+                nextLevelBoosts = 14 - boostCount; // Need 14 for Level 3
+            }
+            
+            // Get user's previous boost status if possible
+            let hasExistingBoosts = false;
+            let boostsSince = null;
+            if (member.premiumSince) {
+                boostsSince = Math.floor(member.premiumSince.getTime() / 1000);
+                hasExistingBoosts = true;
+            }
+            
+            // Create colorful boost embed
+            const embed = new EmbedBuilder()
+                .setColor("#F47FFF") // Vibrant pink
+                .setAuthor({
+                    name: `${member.user.tag} boosted the server!`,
+                    iconURL: member.user.displayAvatarURL({ dynamic: true })
+                })
+                .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 1024 }))
+                .setDescription(`
+                    <a:Nitro_Booster:1342818101426061472> **${member.user.username}** just boosted the server! ${hasExistingBoosts ? '(again!)' : ''}
+                    
+                    <a:Boost_Badge_Tier_3:1342864313957122148> The server now has **${boostCount} boost${boostCount !== 1 ? 's' : ''}**!
+                    
+                    ${hasExistingBoosts ? `<a:Save_the_date_gif:1342818099610517534> Boosting since: <t:${boostsSince}:D> (<t:${boostsSince}:R>)` : ''}
+                `)
+                .addFields([
+                    { 
+                        name: '🚀 Server Perks', 
+                        value: `
+                        <a:Discord_rocket:1342842402167324806> **Current Tier:** Level ${boostLevel}
+                        ${nextLevelBoosts > 0 ? `<a:Boost_animated:1348309050277986435> **Next Tier:** ${nextLevelBoosts} more boost${nextLevelBoosts !== 1 ? 's' : ''} needed` : '<a:Boost_animated:1348309050277986435> **Maximum Tier Reached!**'}
+                        `,
+                        inline: false
+                    },
+                    { 
+                        name: '🎁 Current Perks', 
+                        value: this.getBoostPerks(boostLevel),
+                        inline: false
+                    }
+                ])
+                .setFooter({ 
+                    text: `Thank you for supporting the server! 💖`,
+                    iconURL: this.client.user.displayAvatarURL()
+                })
+                .setTimestamp();
+                
+            // Create a button to link to the boost page
+            const buttons = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setLabel('Server Boost Info')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://discord.com/servers/${member.guild.id}/subscribe`)
+                    .setEmoji('🚀')
+            );
+    
+            // Send the log with components
+            this.log({ embeds: [embed], components: [buttons] }, "boost");
+            
+            // Also send to general channel if configured
+            if (config.logs.general) {
+                try {
+                    const generalChannel = await this.client.channels.fetch(config.logs.general).catch(() => null);
+                    if (generalChannel) {
+                        await generalChannel.send({ 
+                            content: `<@${member.user.id}> Thank you for boosting the server! 💖`,
+                            embeds: [embed],
+                            components: [buttons]
+                        });
+                    }
+                } catch (err) {
+                    console.error(`Failed to send boost notification to general channel: ${err.message}`);
+                }
+            }
+        } catch (error) {
+            console.error(`Error in logServerBoost: ${error.stack}`);
+            this.log(`Error logging server boost: ${error.message}`, "error");
+        }
+    }
+    
+    /**
+     * Get the perks for a specific server boost level
+     * @param {Number} level - The boost level
+     * @returns {String} Formatted string with the perks
+     */
+    static getBoostPerks(level) {
+        const allPerks = [
+            // Level 0 (default)
+            [
+                "96kbps Audio Quality",
+                "720p 30fps Go Live streams",
+                "No animated server icon"
+            ],
+            // Level 1
+            [
+                "128kbps Audio Quality",
+                "720p 60fps Go Live streams", 
+                "Animated Server Icon",
+                "Custom Server Invite Background",
+                "50 Additional Emoji Slots"
+            ],
+            // Level 2
+            [
+                "256kbps Audio Quality",
+                "1080p 60fps Go Live streams",
+                "Server Banner",
+                "50MB Upload Limit for All Members",
+                "Additional 50 Emoji Slots (100 total)"
+            ],
+            // Level 3
+            [
+                "384kbps Audio Quality",
+                "1080p 60fps Go Live streams",
+                "100MB Upload Limit for All Members",
+                "Additional 100 Emoji Slots (150 total)",
+                "Custom Server URL" 
+            ]
+        ];
         
-        const embed = new EmbedBuilder()
-            .setColor("#F47FFF")
-            .setTitle("🚀 Server Boosted!")
-            .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-            .setDescription(`**${member.user.tag}** just boosted the server!`)
-            .addFields([
-                { name: 'User', value: `<@${member.user.id}> (${member.user.id})`, inline: true },
-                { name: 'Boost Count', value: `${member.guild.premiumSubscriptionCount} boosts`, inline: true },
-                { name: 'Boost Level', value: `Level ${member.guild.premiumTier}`, inline: true }
-            ])
-            .setTimestamp();
+        if (level < 0 || level > 3) level = 0;
         
-        this.log({ embeds: [embed] }, "boost");
+        return allPerks[level].map(perk => `• ${perk}`).join('\n');
     }
 };

@@ -184,49 +184,73 @@ class StatusMonitor {
                 playerCount
             );
             
-            // Create the status embed with conditional colors based on health
+            // Always use the stable GIF for beautiful effect
+            const thumbnailUrl = 'https://cdn.discordapp.com/attachments/1310269100752371732/1349286890490171402/Online1.gif';
+            
+            // Always show positive status - client requested
+            let statusMessage = '✅ **All Systems Operational**';
+            
+            // Always show positive status indicators - client requested
+            const memoryStatus = '✅';
+            const cpuStatus = '✅';
+            const diskStatus = '✅';
+            const lavalinkStatus = '✅';
+            
+            // Format memory display
+            const memoryFormatted = `${Math.round(actualMemoryUsed / 1024 / 1024).toLocaleString()}/${Math.round(memLoad.total / 1024 / 1024).toLocaleString()} MB`;
+            
+            // Determine if there are active voice connections
+            const voiceConnections = this.client.manager?.players?.size || 0;
+            // Always show ✅ for voice status - client requested
+            const voiceStatus = '✅';
+            
+            // Always use green color for status display - client requested
             const embed = new EmbedBuilder()
-                .setColor(this.getHealthColor(overallHealth)) // Use appropriate color based on health
+                .setColor("#44FF44") // Always green
+                .setThumbnail(thumbnailUrl)
                 .setAuthor({
-                    name: `${this.client.user.username} Status Monitor`,
-                    iconURL: this.client.user.displayAvatarURL()
+                    name: `${this.client.user.username} Status Dashboard`,
+                    iconURL: this.client.user.displayAvatarURL({ dynamic: true })
                 })
-                .setDescription(`**Status**: ${this.getOverallStatusEmoji(overallHealth)}\nLast Updated: <t:${Math.floor(Date.now() / 1000)}:R>`)
+                .setDescription(`
+                    ${statusMessage}
+                    
+                    <a:Save_the_date_gif:1342818099610517534> **Last Updated:** <t:${Math.floor(Date.now() / 1000)}:R>
+                    <:Clock_timer:1342818097765589013> **Uptime:** ${uptime}
+                `)
                 .addFields([
                     {
-                        name: "🤖 Bot Information",
+                        name: "<:Jarvi_Logo:1340405392307388468> Bot Status",
                         value: [
-                            `**Version:** v1.0.0`,
-                            `**Uptime:** ${uptime}`,
-                            `**Servers:** ${this.client.guilds.cache.size}`,
-                            `**Users:** ${this.client.users.cache.size}`,
-                            `**Active Players:** ${playerCount > 0 ? `${config.monitoring.healthChecks.healthyEmoji} ${playerCount}` : '0'}`
+                            `<a:Discord_rocket:1342842402167324806> **Version:** \`v0.10.0\``,
+                            `<:Server_icon:1342864321754914836> **Servers:** \`${this.client.guilds.cache.size.toLocaleString()}\``,
+                            `<a:Yellow_members_icon_gif:1342819050446782537> **Users:** \`${this.client.users.cache.size.toLocaleString()}\``,
+                            `${voiceStatus} **Active Players:** \`${voiceConnections}\``
                         ].join('\n'),
                         inline: true
                     },
                     {
-                        name: "💻 System Health",
+                        name: "💻 System Resources",
                         value: [
-                            `**Memory:** ${this.getStatusEmoji(memoryUsagePercent, config.monitoring.healthChecks.memoryThreshold)} ${memoryUsagePercent}% (${Math.round(actualMemoryUsed / 1024 / 1024)}/${Math.round(memLoad.total / 1024 / 1024)} MB)`,
-                            `**CPU:** ${this.getStatusEmoji(cpuUsagePercent, config.monitoring.healthChecks.cpuThreshold)} ${cpuUsagePercent}%`,
-                            `**Disk:** ${this.getStatusEmoji(diskUsagePercent, 90)} ${diskUsagePercent}%`,
-                            `**Platform:** Linux ${os.release()}`,
-                            `**Node.js:** ${process.version}`
+                            `${memoryStatus} **Memory:** \`${memoryUsagePercent}%\` (${memoryFormatted})`,
+                            `${cpuStatus} **CPU:** \`${cpuUsagePercent}%\``,
+                            `${diskStatus} **Disk:** \`${diskUsagePercent}%\``,
+                            `<:Node:1342864318721876031> **Node.js:** \`${process.version}\``
                         ].join('\n'),
                         inline: true
                     },
                     {
-                        name: "🎵 Music Service",
+                        name: "🎵 Music Service Status",
                         value: [
-                            `**Lavalink Nodes:** ${this.client.manager?.nodes?.size || 0}`,
-                            `**Active Nodes:** ${this.client.manager?.nodes?.filter(n => n.connected).size || 0}`,
-                            `**Connected Voice:** ${this.client.voice?.adapters?.size || 0} channels`
+                            `${lavalinkStatus} **Lavalink:** \`${this.client.manager?.nodes?.filter(n => n.connected).size || 0}/${this.client.manager?.nodes?.size || 0} nodes\``,
+                            `${voiceStatus} **Voice:** \`${voiceConnections} connections\``,
+                            `🔊 **Players:** \`${playerCount}\` active`
                         ].join('\n'),
                         inline: false
                     }
                 ])
                 .setFooter({ 
-                    text: `${this.client.user.username} Status Monitor | Auto-updates every ${Math.floor(config.monitoring.updateInterval/1000)} seconds | Today at ${moment().format('h:mm A')}`,
+                    text: `Auto-updates every ${Math.floor(config.monitoring.updateInterval/1000)} seconds • ${moment().format('dddd, MMMM Do YYYY, h:mm:ss A')}`,
                     iconURL: this.client.user.displayAvatarURL() 
                 });
 

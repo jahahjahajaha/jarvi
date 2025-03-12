@@ -1,7 +1,7 @@
 {
-  "name": "Rajvi",
+  "name": "Jajvi",
   "version": "1.0.9",
-  "description": "Rajvi music bot base in erelajs",
+  "description": "Jajvi music bot base in erelajs",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js"
