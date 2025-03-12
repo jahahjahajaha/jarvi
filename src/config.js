@@ -29,21 +29,37 @@ const lavalinkNodes = [
   }
 ];
 
+// Check token availability and log it
+const discordToken = process.env.DISCORD_TOKEN || "";
+const tokenVar = process.env.TOKEN || "";
+console.log("[CONFIG] DISCORD_TOKEN available:", !!discordToken);
+console.log("[CONFIG] TOKEN available:", !!tokenVar);
+console.log("[CONFIG] Using token from:", discordToken ? "DISCORD_TOKEN" : (tokenVar ? "TOKEN" : "None found"));
+
 const config = {
   api: {
-    token: getEnvVar("TOKEN", "", true),
+    token: tokenVar || discordToken || "", // Prioritize TOKEN, fall back to DISCORD_TOKEN
     topggapi: getEnvVar("TOPGG_API", ""),
     mongourl: getEnvVar("MONGO_URI", "", true),
+    spotify: {
+      clientId: getEnvVar("SPOTIFY_CLIENT_ID", ""),
+      clientSecret: getEnvVar("SPOTIFY_CLIENT_SECRET", ""),
+      useSpotifyMetadata: true,
+      albumLimit: 50,
+      playlistLimit: 50,
+      autoResolveYoutubeTracks: false, // Only use other platforms if Spotify fails
+    }
   },
 
   bot: {
     prefix: getEnvVar("PREFIX", "."),
     ownerID: getEnvVar("OWNERID", "1212719184870383621").split(","),
+    clientId: getEnvVar("CLIENT_ID", "1333994486979887186"),
     langs: "en",
     supportServer: "https://discord.gg/tBNezcRHMe",
     mentionPrefix: true,
     supportServerID: "1335329530121945139",
-    inviteURL: "https://discord.com/oauth2/authorize?client_id=1343760491452825754"
+    inviteURL: `https://discord.com/oauth2/authorize?client_id=${getEnvVar("CLIENT_ID", "1333994486979887186")}&permissions=8&scope=bot%20applications.commands`,
   },
 
   embed: {
@@ -58,6 +74,7 @@ const config = {
     join: getEnvVar("JOIN_LOGS", "1335329531262668803"),
     leave: getEnvVar("LEAVE_LOGS", "1335329531262668804"),
     error: getEnvVar("ERROR_LOGS", "1335329531262668805"),
+    warning: getEnvVar("WARNING_LOGS", "1349235735416537218"),
     console: getEnvVar("CONSOLE_LOGS", "1349205543897792562"),
     botstatus: getEnvVar("BOT_STATUS_CHANNEL", "1335329530734186535"),
     serverjoinleave: getEnvVar("SERVER_JOIN_LEAVE_LOGS", "1335329530885308539"),
@@ -68,14 +85,14 @@ const config = {
   
   monitoring: {
     enabled: true,
-    updateInterval: 5000, // 5 seconds in milliseconds (change to 3000 for 3 seconds)
+    updateInterval: 3000, // 3 seconds in milliseconds
     editMessages: true, // Edit existing message instead of creating a new one
     statusChannelId: getEnvVar("BOT_STATUS_CHANNEL", "1335329530734186535"), // Status monitoring channel
     statusMessageId: null, // Will be set dynamically when first created
     alertOwnerOnError: true,
-    useWebhooks: true, // Use webhooks for private log channels only
-    deleteOldStatusMessages: false, // Set to false when using edit mode
-    maxMessagesToDelete: 5, // Maximum messages to delete at once (if needed)
+    useWebhooks: false, // Temporarily disabled webhooks due to issues
+    deleteOldStatusMessages: true, // Now set to true to delete old messages every 10 minutes
+    maxMessagesToDelete: 10, // Increased to handle more messages
     showRefreshButton: false, // No need for refresh button with fast updates
     publicChannels: ["serverjoinleave", "boost", "botstatus"], // Channels that should use normal messages not webhooks
     healthChecks: {

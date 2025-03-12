@@ -1,4 +1,4 @@
-const { MessageEmbed } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 
 module.exports = {
   name: "node",
@@ -27,7 +27,7 @@ MEMORY     ::  ${memoryUsage} MB
 CPU CORES  ::  ${node.stats.cpu.cores}`;
     }).join("\n━━━━━━━━━━━━━━━\n");
 
-    const embed = new MessageEmbed()
+    const embed = new EmbedBuilder()
       .setAuthor({ name: "⚙️ Lavalink Node Status", iconURL: client.user.displayAvatarURL() })
       .setDescription(allNodes.length ? `\`\`\`${allNodes}\`\`\`` : "❌ No Lavalink nodes found!")
       .setColor(client.embedColor)

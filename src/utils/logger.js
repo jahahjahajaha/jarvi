@@ -89,6 +89,8 @@ module.exports = class Logger {
         switch (type) {
             case "error":
                 return config.logs.error;
+            case "warn":
+                return config.logs.warning; // New dedicated warning channel
             case "ready":
             case "info":
             case "log":
@@ -334,8 +336,11 @@ module.exports = class Logger {
      * @param {Boolean} detailed - Whether to include detailed system info
      */
     static logBilingual(englishContent, hindiContent, type = "log", detailed = false) {
-        // Only use English messages
-        this.log(englishContent, type, true, detailed);
+        // Always use English content, but log to both console and Discord
+        console.log(`[${type.toUpperCase()}] ${englishContent}`);
+        
+        // Also send to Discord (using the primary method)
+        this.sendToLogChannel(englishContent, type, detailed);
     }
     
     /**

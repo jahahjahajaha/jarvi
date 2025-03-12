@@ -16,6 +16,7 @@ class StatusMonitor {
         this.statusChannel = null;
         this.lastUpdate = Date.now();
         this.startTime = Date.now();
+        this.cleanupCompleted = false;
     }
 
     /**
@@ -23,38 +24,88 @@ class StatusMonitor {
      */
     async init() {
         if (!config.monitoring.enabled) {
-            return this.client.logger.log("Status monitoring is disabled in config", "info");
+            console.log("[STATUS] Status monitoring is disabled in config");
+            return;
         }
 
         try {
             // Fetch status channel
             this.statusChannel = await this.client.channels.fetch(config.monitoring.statusChannelId).catch(() => null);
             if (!this.statusChannel) {
-                return this.client.logger.log("Status channel not found! Monitoring disabled.", "error");
+                console.log("[ERROR] Status channel not found! Monitoring disabled.");
+                return;
             }
-
-            // Check if we already have a status message ID saved
-            if (config.monitoring.statusMessageId) {
-                try {
-                    this.statusMessage = await this.statusChannel.messages.fetch(config.monitoring.statusMessageId).catch(() => null);
-                } catch (error) {
-                    this.client.logger.log(`Failed to fetch existing status message: ${error.message}`, "warn");
-                }
-            }
-
-            // Create or update status message
+            
+            // Always clean up all messages in the status channel on startup
+            await this.cleanupStatusChannel(100);
+            
+            // Reset the cleanup status to ensure we always clean up
+            this.cleanupCompleted = false;
+            
+            // Force creation of a new status message
+            this.statusMessage = null;
+            config.monitoring.statusMessageId = null;
+            
+            // Create new status message
             await this.updateStatus();
 
             // Start periodic updates
             this.startMonitoring();
 
-            this.client.logger.logBilingual(
-                "Bot status monitoring system initialized",
-                "Bot status monitoring system initialized",
-                "ready"
-            );
+            console.log("[READY] Bot status monitoring system initialized");
         } catch (error) {
-            this.client.logger.log(`Failed to initialize status monitoring: ${error.stack}`, "error");
+            console.error(`[ERROR] Failed to initialize status monitoring: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Clean up the status channel by deleting all messages
+     * @param {Number} limit - Maximum number of messages to delete
+     */
+    async cleanupStatusChannel(limit = 100) {
+        try {
+            if (!this.statusChannel) return;
+            
+            // We want to clean up every time the bot restarts, so removed the cleanupCompleted check
+            // to ensure messages are always deleted
+            
+            console.log(`[INFO] Cleaning up status channel - deleting old messages...`);
+            
+            // Fetch messages (up to the limit)
+            const messages = await this.statusChannel.messages.fetch({ limit });
+            
+            // If we have messages to delete
+            if (messages.size > 0) {
+                // Use bulkDelete for messages less than 14 days old
+                try {
+                    await this.statusChannel.bulkDelete(messages);
+                    console.log(`[INFO] Bulk deleted ${messages.size} messages from status channel`);
+                } catch (bulkError) {
+                    // If bulk delete fails (messages older than 14 days), delete one by one
+                    console.log(`[WARN] Bulk delete failed, deleting one by one: ${bulkError.message}`);
+                    
+                    let deleteCount = 0;
+                    for (const [_, message] of messages) {
+                        try {
+                            await message.delete();
+                            deleteCount++;
+                            
+                            // Add a small delay to avoid rate limits
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        } catch (err) {
+                            // Ignore errors for individual message deletions
+                        }
+                    }
+                    
+                    if (deleteCount > 0) {
+                        console.log(`[INFO] Deleted ${deleteCount} old messages one by one from status channel`);
+                    }
+                }
+            }
+            
+            // We've removed the cleanupCompleted flag to ensure messages are always cleaned up
+        } catch (error) {
+            console.error(`[ERROR] Failed to clean up status channel: ${error.message}`);
         }
     }
 
@@ -66,11 +117,18 @@ class StatusMonitor {
             clearInterval(this.monitoringInterval);
         }
 
+        // Use the configured interval (default to 3 seconds if not set)
+        const interval = config.monitoring.updateInterval || 3000;
+        
+        // Log the update interval for debugging
+        console.log(`[INFO] Status monitor set to update every ${interval/1000} seconds`);
+        
         this.monitoringInterval = setInterval(() => {
             this.updateStatus().catch(error => {
-                this.client.logger.log(`Status update error: ${error.message}`, "error");
+                // Only log to console
+                console.error(`[ERROR] Status update error: ${error.message}`);
             });
-        }, config.monitoring.updateInterval || 60000); // Use configured interval (60 seconds default)
+        }, interval);
     }
 
     /**
@@ -103,10 +161,19 @@ class StatusMonitor {
             const diskUsagePercent = Math.round((diskLoad[0].used / diskLoad[0].size) * 100);
             const playerCount = this.client.manager?.players?.size || 0;
             
-            // Determine health status
-            const memoryStatus = this.getStatusEmoji(memoryUsagePercent, config.monitoring.healthChecks.memoryThreshold);
-            const cpuStatus = this.getStatusEmoji(cpuUsagePercent, config.monitoring.healthChecks.cpuThreshold);
-            const playerStatus = this.getStatusEmoji(playerCount, config.monitoring.healthChecks.playerThreshold);
+            // Check if we need to recreate the message (every 10 minutes)
+            // Also reset cleanupCompleted flag to make sure we're always cleaning up
+            const shouldRecreateMessage = 
+                !this.statusMessage || 
+                Date.now() - this.lastUpdate > 600000; // 10 minutes in milliseconds
+                
+            // If it's time for recreation, reset cleanup flag to ensure we delete old messages
+            if (shouldRecreateMessage) {
+                this.cleanupCompleted = false;
+            }
+            
+            // Get uptime information
+            const uptime = this.getReadableUptime();
             
             // Calculate overall health
             const overallHealth = this.calculateOverallHealth(
@@ -114,16 +181,15 @@ class StatusMonitor {
                 cpuUsagePercent, 
                 playerCount
             );
-
-            // Get uptime information
-            const uptime = this.getReadableUptime();
             
-            // Create the status embed
+            // Create the status embed with conditional colors based on health
             const embed = new EmbedBuilder()
-                .setColor(this.getHealthColor(overallHealth))
-                .setTitle(`🖥️ ${this.client.user.username} Status Monitor`)
-                .setDescription(`**Overall Status**: ${this.getOverallStatusEmoji(overallHealth)}\n\n` +
-                    `Last Updated: <t:${Math.floor(Date.now() / 1000)}:R>`)
+                .setColor(this.getHealthColor(overallHealth)) // Use appropriate color based on health
+                .setAuthor({
+                    name: `${this.client.user.username} Status Monitor`,
+                    iconURL: this.client.user.displayAvatarURL()
+                })
+                .setDescription(`**Status**: ${this.getOverallStatusEmoji(overallHealth)}\nLast Updated: <t:${Math.floor(Date.now() / 1000)}:R>`)
                 .addFields([
                     {
                         name: "🤖 Bot Information",
@@ -132,17 +198,17 @@ class StatusMonitor {
                             `**Uptime:** ${uptime}`,
                             `**Servers:** ${this.client.guilds.cache.size}`,
                             `**Users:** ${this.client.users.cache.size}`,
-                            `**Active Players:** ${playerStatus} ${playerCount}`
+                            `**Active Players:** ${playerCount > 0 ? `${config.monitoring.healthChecks.healthyEmoji} ${playerCount}` : '0'}`
                         ].join('\n'),
                         inline: true
                     },
                     {
                         name: "💻 System Health",
                         value: [
-                            `**Memory:** ${memoryStatus} ${memoryUsagePercent}% (${Math.round(memLoad.used / 1024 / 1024)} MB)`,
-                            `**CPU:** ${cpuStatus} ${cpuUsagePercent}%`,
+                            `**Memory:** ${this.getStatusEmoji(memoryUsagePercent, config.monitoring.healthChecks.memoryThreshold)} ${memoryUsagePercent}% (${Math.round(memLoad.used / 1024 / 1024)} MB)`,
+                            `**CPU:** ${this.getStatusEmoji(cpuUsagePercent, config.monitoring.healthChecks.cpuThreshold)} ${cpuUsagePercent}%`,
                             `**Disk:** ${this.getStatusEmoji(diskUsagePercent, 90)} ${diskUsagePercent}%`,
-                            `**Platform:** ${os.platform()} ${os.release()}`,
+                            `**Platform:** Linux ${os.release()}`,
                             `**Node.js:** ${process.version}`
                         ].join('\n'),
                         inline: true
@@ -158,82 +224,61 @@ class StatusMonitor {
                     }
                 ])
                 .setFooter({ 
-                    text: `${this.client.user.username} Status Monitor | Auto-updates every ${Math.floor(config.monitoring.updateInterval/1000)} seconds`,
+                    text: `${this.client.user.username} Status Monitor | Auto-updates every ${Math.floor(config.monitoring.updateInterval/1000)} seconds | Today at ${moment().format('h:mm A')}`,
                     iconURL: this.client.user.displayAvatarURL() 
-                })
-                .setTimestamp();
+                });
 
-            // Create action buttons for refresh and support
-            const actionRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("refresh_status")
-                    .setLabel("Refresh")
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji("🔄"),
-                new ButtonBuilder()
-                    .setLabel("Support")
-                    .setStyle(ButtonStyle.Link)
-                    .setURL(config.bot.supportServer)
-            );
-
-            // Check if we should edit or create new message
-            if (config.monitoring.editMessages && this.statusMessage) {
-                // Edit the existing message
+            // If we need to recreate the message or don't have one
+            if (shouldRecreateMessage) {
+                // Delete all previous status messages
                 try {
-                    await this.statusMessage.edit({ 
-                        content: `**${this.client.user.username} Status Monitor**`,
-                        embeds: [embed],
-                        components: config.monitoring.showRefreshButton ? [actionRow] : []
-                    });
-                } catch (err) {
-                    this.client.logger.log(`Failed to edit status message: ${err.message}`, "warn");
-                    this.statusMessage = null; // Reset if edit fails
-                }
-            }
-            
-            // Create a new message if we don't have one or edit failed
-            if (!this.statusMessage) {
-                // If configured to delete old messages, do so before posting new one
-                if (config.monitoring.deleteOldStatusMessages) {
-                    try {
-                        // Delete previous messages (up to the configured limit)
-                        const messages = await this.statusChannel.messages.fetch({ 
-                            limit: config.monitoring.maxMessagesToDelete || 5 
-                        });
-                        
-                        if (messages.size > 0) {
-                            await this.statusChannel.bulkDelete(messages).catch(e => {
-                                // If bulk delete fails (e.g. messages > 14 days old), delete one by one
-                                messages.forEach(msg => {
-                                    msg.delete().catch(() => {});
-                                });
-                            });
-                            
-                            this.client.logger.log(`Deleted ${messages.size} old status messages`, "info");
+                    // Fetch more messages to ensure we get all status messages
+                    const messages = await this.statusChannel.messages.fetch({ limit: 10 });
+                    
+                    // Filter for bot messages only
+                    const botMessages = messages.filter(msg => 
+                        msg.author.id === this.client.user.id && 
+                        (msg.content?.includes("Status Monitor") || 
+                         (msg.embeds.length > 0 && 
+                          (msg.embeds[0].title?.includes("Status Monitor") || 
+                           msg.embeds[0].author?.name?.includes("Status Monitor"))))
+                    );
+                    
+                    if (botMessages.size > 0) {
+                        // Delete old messages one by one (more reliable than bulkDelete)
+                        for (const [_, message] of botMessages) {
+                            await message.delete().catch(() => {});
                         }
-                    } catch (err) {
-                        this.client.logger.log(`Failed to delete old status messages: ${err.message}`, "error");
+                        
+                        // Log deletion for debugging but only to console
+                        console.log(`[INFO] Deleted ${botMessages.size} old status messages`);
                     }
+                } catch (err) {
+                    console.error(`[ERROR] Failed to delete old status messages: ${err.message}`);
                 }
                 
-                // Create a new status message
+                // Create a completely new status message with no initial content
                 this.statusMessage = await this.statusChannel.send({ 
-                    content: `**${this.client.user.username} Status Monitor**`,
-                    embeds: [embed],
-                    components: config.monitoring.showRefreshButton ? [actionRow] : []
+                    embeds: [embed]
                 });
                 
-                // Save message ID for future use
-                config.monitoring.statusMessageId = this.statusMessage.id;
+                // Update timestamp for next recreation cycle
+                this.lastUpdate = Date.now();
+            } else {
+                // Just edit the existing message
+                try {
+                    await this.statusMessage.edit({ 
+                        embeds: [embed]
+                    });
+                } catch (err) {
+                    console.warn(`[WARN] Failed to edit status message: ${err.message}`);
+                    // Message may have been deleted, recreate next cycle
+                    this.statusMessage = null;
+                }
             }
-
-            // Update last update timestamp
-            this.lastUpdate = Date.now();
-            
-            // Automatic refresh happens through the main updateInterval setting
-            // No need for additional refresh here
         } catch (error) {
-            this.client.logger.log(`Error updating status: ${error.stack}`, "error");
+            // Only log errors to console, not to Discord
+            console.error(`[ERROR] Error updating status: ${error.message}`);
         }
     }
 
@@ -253,10 +298,10 @@ class StatusMonitor {
                 content: `✅ Status has been refreshed.`,
                 ephemeral: true
             }).catch(err => {
-                this.client.logger.log(`Failed to send refresh confirmation: ${err.message}`, "error");
+                console.error(`[ERROR] Failed to send refresh confirmation: ${err.message}`);
             });
             
-            this.client.logger.log(`Status refreshed by ${interaction.user.tag}`, "info");
+            console.log(`[INFO] Status refreshed by ${interaction.user.tag}`);
         }
     }
 

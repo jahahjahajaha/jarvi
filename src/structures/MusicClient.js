@@ -3,7 +3,7 @@ const { Database } = require('quickmongo');
 const { Manager } = require("erela.js");
 const { readdirSync } = require("fs");
 const deezer = require("erela.js-deezer");
-const spotify = require("better-erela.js-spotify").default;
+const spotify = require("erela.js-spotify");
 const apple = require("erela.js-apple");
 const facebook = require("erela.js-facebook");
 const mongoose = require('mongoose');
@@ -25,7 +25,9 @@ class MusicBot extends Client {
                 GatewayIntentBits.GuildMessages,
                 GatewayIntentBits.GuildMembers,
                 GatewayIntentBits.GuildVoiceStates,
-                GatewayIntentBits.MessageContent
+                GatewayIntentBits.MessageContent,
+                GatewayIntentBits.GuildPresences,
+                GatewayIntentBits.GuildMessageReactions
             ]
         });
 
@@ -51,7 +53,15 @@ class MusicBot extends Client {
             autoPlay: true,
             plugins: [
                 new deezer(),
-                new spotify(),
+                new spotify({
+                    clientID: this.config.api.spotify.clientId,
+                    clientSecret: this.config.api.spotify.clientSecret,
+                    albumLimit: this.config.api.spotify.albumLimit || 50,
+                    playlistLimit: this.config.api.spotify.playlistLimit || 50,
+                    useSpotifyMetadata: this.config.api.spotify.useSpotifyMetadata || true,
+                    convertUnresolved: true,
+                    autoResolveYoutubeTracks: this.config.api.spotify.autoResolveYoutubeTracks || false
+                }),
                 new apple(),
                 new facebook(),
             ],
@@ -138,13 +148,13 @@ class MusicBot extends Client {
 
         if (availableNodes.length > 0) {
             const alternativeNode = availableNodes[0];
-            this.logger.log(`Switching to alternative node ${alternativeNode.options.identifier}`, "info");
-            this.logger.log(`Alternative node info - Host: ${alternativeNode.options.host}, Port: ${alternativeNode.options.port}`, "info");
+            this.logger.log(`Switching to alternative node ${alternativeNode.options.identifier}`, "info", false);
+            this.logger.log(`Alternative node info - Host: ${alternativeNode.options.host}, Port: ${alternativeNode.options.port}`, "info", false);
 
             // Move all players to the alternative node
             this.manager.players.forEach(player => {
                 if (player.node.options.identifier === failedNode.options.identifier) {
-                    this.logger.log(`Moving player in guild ${player.guild} to node ${alternativeNode.options.identifier}`, "info");
+                    this.logger.log(`Moving player in guild ${player.guild} to node ${alternativeNode.options.identifier}`, "info", false);
                     player.node = alternativeNode;
                     if (player.playing) {
                         const { track, position } = player;
@@ -154,7 +164,7 @@ class MusicBot extends Client {
             });
         } else {
             this.logger.log("No alternative nodes available. Music playback may be disrupted.", "warn");
-            this.logger.log("Attempting to reconnect to original node...", "info");
+            this.logger.log("Attempting to reconnect to original node...", "info", false);
             setTimeout(() => failedNode.connect(), 5000);
         }
     }
@@ -204,12 +214,9 @@ class MusicBot extends Client {
     }
     
     loadSlashCommands() {
-        // Only load specific slash commands as requested - family-friendly music bot
-        const allowedCommands = ['help', 'play', 'pause', 'resume'];
-        
+        // Allow all slash commands to be loaded for the developer test bot
         // Track count of commands for logging
         let loadedCount = 0;
-        let restrictedCount = 0;
         
         // Process each slash command file
         readdirSync("./src/slashCommands/").forEach(file => {
@@ -218,12 +225,6 @@ class MusicBot extends Client {
             
             // Get the command name from the file name
             const commandName = file.split('.')[0];
-            
-            // Skip if not in allowed commands list - without warnings
-            if (!allowedCommands.includes(commandName)) {
-                restrictedCount++;
-                return;
-            }
             
             try {
                 const command = require(`../slashCommands/${file}`);
@@ -240,7 +241,7 @@ class MusicBot extends Client {
             }
         });
         
-        // Log summary without mentioning restricted commands
+        // Log summary of loaded commands
         this.logger.log(`Loaded ${loadedCount} slash commands successfully!`, "ready");
     }
 
@@ -258,7 +259,42 @@ class MusicBot extends Client {
         // Set client instance in logger for Discord channel logging
         this.logger.setClient(this);
         
-        return super.login(this.token);
+        // Better error handling for login
+        console.log("[CONNECTION] Attempting to connect to Discord...");
+        console.log("[CONNECTION] Token check: DISCORD_TOKEN exists:", !!process.env.DISCORD_TOKEN);
+        console.log("[CONNECTION] Token check: TOKEN exists:", !!process.env.TOKEN);
+        console.log("[CONNECTION] Token check: this.token exists:", !!this.token);
+        console.log("[CONNECTION] Token first 10 chars:", this.token ? this.token.substring(0, 10) + "..." : "undefined");
+        
+        return super.login(this.token)
+            .then(() => {
+                console.log("[CONNECTION] Successfully connected to Discord API!");
+                console.log(`[CONNECTION] Connected as: ${this.user.tag} (${this.user.id})`);
+                return true;
+            })
+            .catch(error => {
+                console.error("[CONNECTION ERROR] Failed to login to Discord:");
+                console.error(error.message);
+                
+                if (error.message.includes("token")) {
+                    console.error("[TOKEN ERROR] The Discord bot token appears to be invalid or expired.");
+                    console.error("[TOKEN ERROR] Please check your .env file and update the TOKEN variable.");
+                    // Try one more time with direct environment variable
+                    console.error("[TOKEN RETRY] Attempting to connect with direct TOKEN from environment...");
+                    return super.login(process.env.TOKEN)
+                        .then(() => {
+                            console.log("[CONNECTION] Successfully connected with direct TOKEN!");
+                            console.log(`[CONNECTION] Connected as: ${this.user.tag} (${this.user.id})`);
+                            return true;
+                        })
+                        .catch(retryError => {
+                            console.error("[TOKEN RETRY] Failed with direct TOKEN too:", retryError.message);
+                            throw retryError;
+                        });
+                }
+                
+                throw error; // Rethrow so parent can handle
+            });
     }
 }
 

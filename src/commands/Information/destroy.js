@@ -1,4 +1,4 @@
-const { MessageEmbed } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 
 module.exports = {
   name: "destroy",
@@ -22,7 +22,7 @@ module.exports = {
     if (!player) {
       return message.reply({
         embeds: [
-          new MessageEmbed()
+          new EmbedBuilder()
             .setColor("#FF0000")
             .setDescription(
               "❌ | **No active music session found!**\nThere's nothing to destroy."
@@ -36,7 +36,7 @@ module.exports = {
 
     return message.reply({
       embeds: [
-        new MessageEmbed()
+        new EmbedBuilder()
           .setColor(client.embedColor)
           .setAuthor({
             name: "| Music Player Destroyed",

@@ -12,16 +12,16 @@ module.exports = async (client, node, error) => {
         return;
     }
     
-    // Only log actual errors
-    client.logger.log(`Node "${node.options.identifier}" encountered an error: ${errorMessage}`, "error");
-    client.logger.log(`Additional Error Info - Code: ${errorCode}, Type: ${errorType}`, "error");
+    // Only log actual errors to warnings channel
+    client.logger.log(`Node "${node.options.identifier}" encountered an error: ${errorMessage}`, "error", true);
+    client.logger.log(`Additional Error Info - Code: ${errorCode}, Type: ${errorType}`, "error", true);
     
     // Handle critical connection errors
     if (errorMessage.includes("ECONNREFUSED") || 
         errorMessage.includes("socket hang up") || 
         errorMessage.includes("Unexpected server response")) {
         
-        client.logger.log(`Critical node error detected. Implementing retry...`, "warn");
+        client.logger.log(`Critical node error detected. Implementing retry...`, "warn", true);
         
         // Increment retry counter
         node.retryAttempts = (node.retryAttempts || 0) + 1;
@@ -32,7 +32,7 @@ module.exports = async (client, node, error) => {
         // Schedule reconnection attempt
         setTimeout(() => {
             if (!node.connected) {
-                client.logger.log(`Attempting to reconnect to node (attempt #${node.retryAttempts})...`, "warn");
+                client.logger.log(`Attempting to reconnect to node (attempt #${node.retryAttempts})...`, "warn", true);
                 node.connect();
             }
         }, delay);

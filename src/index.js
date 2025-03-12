@@ -147,10 +147,57 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply({ embeds: [embed], ephemeral: true }).catch(console.error);
 });
 
-// Start the bot
-client.connect().catch(error => {
-    console.error('[FATAL] Application startup failed:', error);
+// Start the bot with detailed diagnostics
+console.log('[STARTUP] Starting connection process with the following configuration:');
+console.log(`[STARTUP] Bot Client ID: ${client.config.bot.clientId}`);
+console.log(`[STARTUP] MongoDB URL configured: ${client.config.api.mongourl ? 'Yes' : 'No'}`);
+console.log(`[STARTUP] Lavalink Node: ${client.config.nodes[0]?.host || 'Not configured'}`);
+console.log(`[STARTUP] Total commands loaded: ${client.commands.size}`);
+console.log(`[STARTUP] Total slash commands loaded: ${client.slashCommands.size}`);
+console.log('[STARTUP] Initiating connection to Discord...');
+
+// Try direct login with raw tokens as a temporary workaround for testing
+console.log('[STARTUP] Attempting direct connection with token...');
+const directToken = process.env.DISCORD_TOKEN || process.env.TOKEN;
+
+if (!directToken) {
+    console.error('[FATAL] No token available! Both DISCORD_TOKEN and TOKEN are missing or empty.');
     process.exit(1);
+}
+
+// First try with client's normal connect method
+client.connect().then(() => {
+    console.log('[STARTUP] Successfully connected to Discord!');
+    console.log(`[STARTUP] Logged in as: ${client.user.tag} (${client.user.id})`);
+    console.log(`[STARTUP] Bot is in ${client.guilds.cache.size} servers`);
+}).catch(error => {
+    console.error('[CONNECTION ERROR] Primary connection method failed:', error.message);
+    
+    // More detailed error diagnostics
+    if (error.code === 'TOKEN_INVALID') {
+        console.error('[TOKEN_ERROR] The provided token is invalid. Please check your .env file.');
+        console.error('[TOKEN_DEBUG] Token value being used:', directToken.substring(0, 10) + '...');
+        console.error('[TOKEN_DEBUG] Environment variable values:');
+        console.error('[TOKEN_DEBUG] DISCORD_TOKEN exists:', !!process.env.DISCORD_TOKEN);
+        console.error('[TOKEN_DEBUG] TOKEN exists:', !!process.env.TOKEN);
+        
+        // Attempt a direct login as fallback
+        console.log('[RETRY] Attempting direct login as fallback...');
+        client.login(directToken).then(() => {
+            console.log('[STARTUP] Successfully connected via direct login!');
+            console.log(`[STARTUP] Logged in as: ${client.user.tag} (${client.user.id})`);
+            console.log(`[STARTUP] Bot is in ${client.guilds.cache.size} servers`);
+        }).catch(directError => {
+            console.error('[FATAL] Direct login also failed:', directError.message);
+            process.exit(1);
+        });
+    } else if (error.code === 'DISALLOWED_INTENTS') {
+        console.error('[INTENTS_ERROR] The bot is missing required privileged intents. Please enable them in the Discord Developer Portal.');
+        process.exit(1);
+    } else {
+        console.error('[UNKNOWN_ERROR] Error details:', error.message);
+        process.exit(1);
+    }
 });
 
 module.exports = client;

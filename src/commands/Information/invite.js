@@ -21,7 +21,7 @@ module.exports = {
                 .setLabel("Invite Me")
                 .setStyle(ButtonStyle.Link)
                 .setEmoji("<a:Plus_gif:1341798987388289144>")
-                .setURL(`https://discord.com/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`),
+                .setURL(client.config.bot.inviteURL),
             new ButtonBuilder()
                 .setLabel("Support Server")
                 .setStyle(ButtonStyle.Link)

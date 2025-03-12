@@ -18,7 +18,7 @@ module.exports = {
                     .setLabel("Add Me")
                     .setStyle(ButtonStyle.Link)
                     .setEmoji("<:Plus:1340935740825141259>")
-                    .setURL(`https://discord.com/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=applications.commands%20bot`), 
+                    .setURL(client.config.bot.inviteURL), 
 
                 new ButtonBuilder()
                   .setLabel("Support Server")
@@ -36,7 +36,7 @@ module.exports = {
 
 
 ## **<a:Link:1341469206478061589> Quick Links:**
-- <:Plus:1340935740825141259> **[Add Bot](https://discord.com/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=applications.commands%20bot)**  
+- <:Plus:1340935740825141259> **[Add Bot](${client.config.bot.inviteURL})**  
 - <:Help:1340939355035799603> **[Support](https://discord.gg/tBNezcRHMe)**  
 
 ### **<a:Information_gif:1341473866551394416> Bot Information:**

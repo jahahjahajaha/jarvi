@@ -42,12 +42,12 @@ module.exports = {
         
         console.log("[BOT] " + client.user.tag + " is ready!");
 
-        // Try to send startup notification to log channel if configured
-        if (client.config.logs.logChannelId) {
+        // Try to send startup notification to general log channel (not status channel)
+        if (client.config.logs.general) {
             try {
-                const logChannel = await client.channels.fetch(client.config.logs.logChannelId).catch(() => null);
+                const generalLogChannel = await client.channels.fetch(client.config.logs.general).catch(() => null);
                 
-                if (logChannel) {
+                if (generalLogChannel) {
                     const embed = new EmbedBuilder()
                         .setColor('#00FF00')
                         .setTitle('🚀 Bot Started')
@@ -55,11 +55,11 @@ module.exports = {
                         .setThumbnail(client.user.displayAvatarURL())
                         .setTimestamp();
                         
-                    await logChannel.send({ embeds: [embed] });
-                    client.logger.log(`Sent startup notification to log channel: ${client.config.logs.logChannelId}`, "info");
+                    await generalLogChannel.send({ embeds: [embed] });
+                    client.logger.log(`Sent startup notification to general log channel: ${client.config.logs.general}`, "info", false);
                 }
             } catch (error) {
-                client.logger.log(`Failed to send startup notification: ${error.message}`, "error");
+                client.logger.log(`Failed to send startup notification: ${error.message}`, "error", true);
             }
         }
         
