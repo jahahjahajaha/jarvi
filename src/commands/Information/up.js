@@ -1,4 +1,4 @@
-const { MessageEmbed } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 
 module.exports = {
     name: "uptime",
@@ -25,7 +25,7 @@ module.exports = {
         let uptime = `🗓 **${days}** days, ⏳ **${hours}** hours, ⏰ **${minutes}** minutes, ⏲ **${seconds}** seconds`;
 
         // Embed Message
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
             .setAuthor({
                 name: `${client.user.username}'s Uptime 🟢`,
                 iconURL: client.user.displayAvatarURL(),

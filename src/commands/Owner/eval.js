@@ -1,4 +1,4 @@
-const { MessageEmbed } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 const { post } = require("node-superfetch");
 
 module.exports = {
@@ -11,10 +11,11 @@ module.exports = {
   permission: [],
   owner: true,
   execute: async (message, args, client, prefix) => {
-    const embed = new MessageEmbed().addField(
-      "💎 Input",
-      "```js\n" + args.join(" ") + "```"
-    );
+    const embed = new EmbedBuilder()
+      .addFields([{
+        name: "💎 Input",
+        value: "```js\n" + args.join(" ") + "```"
+      }]);
 
     try {
       const code = args.join(" ");
@@ -40,11 +41,17 @@ module.exports = {
           output
         );
         embed
-          .addField("🚮 Output", `https://hastebin.com/${body.key}.js`)
+          .addFields([{ 
+            name: "🚮 Output", 
+            value: `https://hastebin.com/${body.key}.js` 
+          }])
           .setColor(client.embedColor);
       } else {
         embed
-          .addField("🚮 Output", "```js\n" + output + "```")
+          .addFields([{
+            name: "🚮 Output", 
+            value: "```js\n" + output + "```"
+          }])
           .setColor(client.embedColor);
       }
 
@@ -54,10 +61,16 @@ module.exports = {
       if (err.length > 1024) {
         const { body } = await post("https://hastebin.com/documents").send(err);
         embed
-          .addField("🚮 Output", `https://hastebin.com/${body.key}.js`)
+          .addFields([{
+            name: "🚮 Output", 
+            value: `https://hastebin.com/${body.key}.js`
+          }])
           .setColor("RED");
       } else {
-        embed.addField("🚮 Output", "```js\n" + err + "```").setColor("#303037");
+        embed.addFields([{
+          name: "🚮 Output", 
+          value: "```js\n" + err + "```"
+        }]).setColor("#303037");
       }
 
       message.channel.send({ embeds: [embed] });

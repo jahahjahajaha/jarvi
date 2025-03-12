@@ -54,13 +54,12 @@ class MusicBot extends Client {
             plugins: [
                 new deezer(),
                 new spotify({
-                    clientID: this.config.api.spotify.clientId,
-                    clientSecret: this.config.api.spotify.clientSecret,
+                    clientID: process.env.SPOTIFY_CLIENT_ID || this.config.api.spotify.clientId,
+                    clientSecret: process.env.SPOTIFY_CLIENT_SECRET || this.config.api.spotify.clientSecret,
                     albumLimit: this.config.api.spotify.albumLimit || 50,
                     playlistLimit: this.config.api.spotify.playlistLimit || 50,
-                    useSpotifyMetadata: this.config.api.spotify.useSpotifyMetadata || true,
+                    useSpotifyMetadata: true,
                     convertUnresolved: true,
-                    autoResolveYoutubeTracks: this.config.api.spotify.autoResolveYoutubeTracks || false
                 }),
                 new apple(),
                 new facebook(),

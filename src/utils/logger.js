@@ -367,9 +367,15 @@ module.exports = class Logger {
         // Also send to serverjoinleave channel
         if (config.logs.serverjoinleave) {
             try {
-                const joinLeaveChannel = await this.client.channels.fetch(config.logs.serverjoinleave);
+                const joinLeaveChannel = await this.client.channels.fetch(config.logs.serverjoinleave).catch(() => null);
                 if (joinLeaveChannel) {
-                    joinLeaveChannel.send({ embeds: [embed] });
+                    await joinLeaveChannel.send({ 
+                        content: "🎉 **Bot joined a new server!**",
+                        embeds: [embed] 
+                    });
+                    console.log(`[INFO] Server join notification sent to channel ${joinLeaveChannel.name}`);
+                } else {
+                    console.error(`[ERROR] Server join/leave channel not found: ${config.logs.serverjoinleave}`);
                 }
             } catch (err) {
                 console.error(`Failed to send join log to serverjoinleave channel: ${err.message}`);
@@ -401,9 +407,15 @@ module.exports = class Logger {
         // Also send to serverjoinleave channel
         if (config.logs.serverjoinleave) {
             try {
-                const joinLeaveChannel = await this.client.channels.fetch(config.logs.serverjoinleave);
+                const joinLeaveChannel = await this.client.channels.fetch(config.logs.serverjoinleave).catch(() => null);
                 if (joinLeaveChannel) {
-                    joinLeaveChannel.send({ embeds: [embed] });
+                    await joinLeaveChannel.send({ 
+                        content: "😢 **Bot left a server!**",
+                        embeds: [embed] 
+                    });
+                    console.log(`[INFO] Server leave notification sent to channel ${joinLeaveChannel.name}`);
+                } else {
+                    console.error(`[ERROR] Server join/leave channel not found: ${config.logs.serverjoinleave}`);
                 }
             } catch (err) {
                 console.error(`Failed to send leave log to serverjoinleave channel: ${err.message}`);

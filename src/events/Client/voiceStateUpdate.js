@@ -1,5 +1,5 @@
 const { MusicBot } = require("../../structures/MusicClient");
-const { VoiceState, MessageEmbed } = require("discord.js");
+const { VoiceState, EmbedBuilder } = require("discord.js");
 const i18n = require("../../utils/i18n");
 
 /**
@@ -54,8 +54,8 @@ module.exports = {
   switch (stateChange.type) {
     case "JOIN":
       if (stateChange.members.size === 1 && player.paused) {
-        let emb = new MessageEmbed()
-          .setAuthor(`Resuming paused queue`)
+        let emb = new EmbedBuilder()
+          .setAuthor({ name: `Resuming paused queue` })
           .setColor(client.embedColor)
           .setDescription(
             `${i18n.__("player.eresume")}`

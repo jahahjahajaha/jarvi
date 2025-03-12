@@ -156,7 +156,9 @@ class StatusMonitor {
             ]);
 
             // Calculate health metrics
-            const memoryUsagePercent = Math.round((memLoad.used / memLoad.total) * 100);
+            // Use available memory calculation to exclude cache/buffers for more accurate reporting
+            const actualMemoryUsed = memLoad.used - memLoad.buffcache; // Subtract buffers and cache
+            const memoryUsagePercent = Math.round((actualMemoryUsed / memLoad.total) * 100);
             const cpuUsagePercent = Math.round(cpuLoad.currentLoad);
             const diskUsagePercent = Math.round((diskLoad[0].used / diskLoad[0].size) * 100);
             const playerCount = this.client.manager?.players?.size || 0;
@@ -205,7 +207,7 @@ class StatusMonitor {
                     {
                         name: "💻 System Health",
                         value: [
-                            `**Memory:** ${this.getStatusEmoji(memoryUsagePercent, config.monitoring.healthChecks.memoryThreshold)} ${memoryUsagePercent}% (${Math.round(memLoad.used / 1024 / 1024)} MB)`,
+                            `**Memory:** ${this.getStatusEmoji(memoryUsagePercent, config.monitoring.healthChecks.memoryThreshold)} ${memoryUsagePercent}% (${Math.round(actualMemoryUsed / 1024 / 1024)}/${Math.round(memLoad.total / 1024 / 1024)} MB)`,
                             `**CPU:** ${this.getStatusEmoji(cpuUsagePercent, config.monitoring.healthChecks.cpuThreshold)} ${cpuUsagePercent}%`,
                             `**Disk:** ${this.getStatusEmoji(diskUsagePercent, 90)} ${diskUsagePercent}%`,
                             `**Platform:** Linux ${os.release()}`,

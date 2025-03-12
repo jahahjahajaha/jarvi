@@ -1,4 +1,4 @@
-const { MessageEmbed } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 
 module.exports = {
     name: "ping",
@@ -16,7 +16,7 @@ module.exports = {
         const botLatency = pingMsg.createdTimestamp - message.createdTimestamp;
         const apiLatency = client.ws.ping;
 
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
             .setAuthor({ name: "📶 Bot Ping Status", iconURL: client.user.displayAvatarURL() })
             .setColor(client.embedColor)
             .setDescription(`
