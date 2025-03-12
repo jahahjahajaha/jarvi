@@ -32,6 +32,7 @@ class MusicBot extends Client {
 
         this.commands = new Collection();
         this.aliases = new Collection();
+        this.slashCommands = new Collection();
         this.config = require("../config.js");
         this.owner = this.config.bot.ownerID;
         this.prefix = this.config.bot.prefix;
@@ -125,6 +126,7 @@ class MusicBot extends Client {
         // Load Events and Commands
         this.loadEvents();
         this.loadCommands();
+        this.loadSlashCommands();
     }
 
     // Advanced node failover system
@@ -185,6 +187,41 @@ class MusicBot extends Client {
             }
         });
     }
+    
+    loadSlashCommands() {
+        // Only load specific slash commands as requested
+        const allowedCommands = ['help', 'play', 'pause', 'resume'];
+        
+        // Process each slash command file
+        readdirSync("./src/slashCommands/").forEach(file => {
+            // Only process JS files
+            if (!file.endsWith('.js')) return;
+            
+            // Get the command name from the file name
+            const commandName = file.split('.')[0];
+            
+            // Skip if not in allowed commands list
+            if (!allowedCommands.includes(commandName)) {
+                this.logger.log(`Skipping slash command: ${commandName} (restricted)`, "warn");
+                return;
+            }
+            
+            try {
+                const command = require(`../slashCommands/${file}`);
+                if (!command.data || !command.execute) {
+                    this.logger.log(`Invalid slash command structure in ${file}`, "warn");
+                    return;
+                }
+                
+                this.logger.log(`Loading slash command: ${commandName}`, "cmd");
+                this.slashCommands.set(commandName, command);
+            } catch (error) {
+                this.logger.log(`Error loading slash command ${file}: ${error.message}`, "error");
+            }
+        });
+        
+        this.logger.log(`Loaded ${this.slashCommands.size} slash commands`, "ready");
+    }
 
     createEmbed(title, description, fields = []) {
         const embed = new EmbedBuilder()
@@ -197,6 +234,9 @@ class MusicBot extends Client {
     }
 
     connect() {
+        // Set client instance in logger for Discord channel logging
+        this.logger.setClient(this);
+        
         return super.login(this.token);
     }
 }

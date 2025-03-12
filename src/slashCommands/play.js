@@ -1,74 +1,226 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
+const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
-        .setDescription('Play a song from YouTube or URL')
+        .setDescription('Play a song from YouTube, Spotify, or other supported platforms')
         .addStringOption(option =>
             option.setName('query')
                 .setDescription('Song name or URL')
                 .setRequired(true)),
     async execute(interaction, client) {
-        const query = interaction.options.getString('query');
-
+        // Get user's language preference - Hindi or English (default to English)
+        const useHindi = interaction.locale === "hi" || false;
+        
+        // Messages for both languages
+        const messages = {
+            needVoiceChannel: useHindi
+                ? `❌ आपको संगीत बजाने के लिए वॉइस चैनल में होना चाहिए!`
+                : `❌ You need to be in a voice channel to play music!`,
+                
+            needSameChannel: useHindi
+                ? `❌ आपको इस कमांड का उपयोग करने के लिए मेरे साथ एक ही वॉइस चैनल में होना चाहिए!`
+                : `❌ You need to be in the same voice channel as me to use this command!`
+        };
+        
+        // Check if user is in voice channel
         if (!interaction.member.voice.channel) {
             return await interaction.reply({ 
-                content: `${client.emoji.error} You need to be in a voice channel!`,
+                content: messages.needVoiceChannel,
                 ephemeral: true 
             });
         }
+
+        // Check if bot is in a different voice channel
+        if (interaction.guild.members.me.voice.channel && 
+            interaction.member.voice.channel.id !== interaction.guild.members.me.voice.channel.id) {
+            return await interaction.reply({
+                content: messages.needSameChannel,
+                ephemeral: true
+            });
+        }
+
+        const query = interaction.options.getString('query');
 
         // Defer the reply since searching and loading might take time
         await interaction.deferReply();
 
         try {
+            // Search for the song
             const res = await client.manager.search(query, interaction.user);
+            
+            // Handle if no search results
             if (!res.tracks[0]) {
+                const noResultsMsg = useHindi
+                    ? `❌ "${query}" के लिए कोई परिणाम नहीं मिला!`
+                    : `❌ No results found for "${query}"!`;
+                    
                 return await interaction.editReply({ 
-                    content: `${client.emoji.error} No results found!`,
+                    content: noResultsMsg,
                     ephemeral: true 
                 });
             }
 
-            const player = client.manager.create({
-                guild: interaction.guild.id,
-                voiceChannel: interaction.member.voice.channel.id,
-                textChannel: interaction.channel.id,
-            });
-
-            player.connect();
-            player.queue.add(res.tracks[0]);
-
-            if (!player.playing && !player.paused && !player.queue.size) {
-                player.play();
+            // Get or create player
+            let player = client.manager.get(interaction.guild.id);
+            if (!player) {
+                player = client.manager.create({
+                    guild: interaction.guild.id,
+                    voiceChannel: interaction.member.voice.channel.id,
+                    textChannel: interaction.channel.id,
+                    selfDeafen: true,
+                    volume: 80 // Set default volume to 80%
+                });
             }
 
-            const embed = client.createEmbed(
-                null,
-                `${client.emoji.success} Added **${res.tracks[0].title}** to the queue!`,
-                [
-                    { 
-                        name: `${client.emoji.time} Duration`,
-                        value: res.tracks[0].duration > 0 ? 
-                            `\`${Math.floor(res.tracks[0].duration / 60000)}:${((res.tracks[0].duration % 60000) / 1000).toFixed(0).padStart(2, '0')}\`` : 
-                            'Live Stream',
-                        inline: true
-                    },
-                    {
-                        name: `${client.emoji.music} Requested By`,
-                        value: `${interaction.user}`,
-                        inline: true
-                    }
-                ]
-            );
+            // Connect to voice channel if not already connected
+            if (player.state !== "CONNECTED") player.connect();
 
-            await interaction.editReply({ embeds: [embed] });
+            // Handle playlist
+            if (res.playlist) {
+                player.queue.add(res.tracks);
+                
+                // Create playlist embed with thumbnail - bilingual support
+                const playlistTitle = useHindi ? "प्लेलिस्ट कतार में जोड़ा गया" : "Playlist Added to Queue";
+                const totalTracksLabel = useHindi ? "🎵 कुल ट्रैक" : "🎵 Total Tracks";
+                const songsText = useHindi ? "गाने" : "songs";
+                const durationLabel = useHindi ? "⏱️ अनुमानित अवधि" : "⏱️ Estimated Duration";
+                const requestedByLabel = useHindi ? "🎧 अनुरोध किया गया" : "🎧 Requested By";
+                const footerText = useHindi ? 
+                    `सभी गानों को देखने के लिए /queue का उपयोग करें` : 
+                    `Use /queue to see all songs in the queue`;
+                
+                const playlistEmbed = new EmbedBuilder()
+                    .setColor(client.embedColor)
+                    .setTitle(playlistTitle)
+                    .setDescription(`**${res.playlist.name}**`)
+                    .setThumbnail(res.tracks[0].thumbnail || `https://img.youtube.com/vi/${res.tracks[0].identifier}/maxresdefault.jpg`)
+                    .addFields([
+                        { name: totalTracksLabel, value: `${res.tracks.length} ${songsText}`, inline: true },
+                        { name: durationLabel, value: formatTotalDuration(res.tracks), inline: true },
+                        { name: requestedByLabel, value: `${interaction.user}`, inline: true }
+                    ])
+                    .setFooter({ 
+                        text: footerText, 
+                        iconURL: client.user.displayAvatarURL() 
+                    })
+                    .setTimestamp();
+                
+                // Start playing if not already playing
+                if (!player.playing && !player.paused && player.queue.totalSize === res.tracks.length) {
+                    player.play();
+                }
+                
+                return await interaction.editReply({ embeds: [playlistEmbed] });
+            } 
+            // Handle single track
+            else {
+                const track = res.tracks[0];
+                player.queue.add(track);
+                
+                // Create track embed with bilingual support
+                const trackTitle = useHindi ? "कतार में जोड़ा गया" : "Added to Queue";
+                const durationLabel = useHindi ? "⏱️ अवधि" : "⏱️ Duration";
+                const liveText = useHindi ? '🔴 लाइव' : '🔴 LIVE';
+                const artistLabel = useHindi ? "👤 कलाकार" : "👤 Artist";
+                const unknownText = useHindi ? "अज्ञात" : "Unknown";
+                const requestedByLabel = useHindi ? "🎧 अनुरोध किया गया" : "🎧 Requested By";
+                const positionLabel = useHindi ? "📋 स्थिति" : "📋 Position";
+                const nowPlayingText = useHindi ? "अभी बज रहा है" : "Now Playing";
+                const footerText = useHindi ? 
+                    `अधिक नियंत्रण के लिए /nowplaying टाइप करें` : 
+                    `Type /nowplaying for more controls`;
+                
+                const embed = new EmbedBuilder()
+                    .setColor(client.embedColor)
+                    .setTitle(trackTitle)
+                    .setDescription(`[${track.title}](${track.uri})`)
+                    .setThumbnail(track.thumbnail || `https://img.youtube.com/vi/${track.identifier}/maxresdefault.jpg`)
+                    .addFields([
+                        { 
+                            name: durationLabel, 
+                            value: track.duration > 0 ? formatDuration(track.duration) : liveText, 
+                            inline: true 
+                        },
+                        {
+                            name: artistLabel, 
+                            value: track.author || unknownText,
+                            inline: true
+                        },
+                        {
+                            name: requestedByLabel,
+                            value: `${interaction.user}`,
+                            inline: true
+                        },
+                        {
+                            name: positionLabel,
+                            value: player.queue.size === 0 ? nowPlayingText : `#${player.queue.size}`,
+                            inline: true
+                        }
+                    ])
+                    .setFooter({ 
+                        text: footerText,
+                        iconURL: client.user.displayAvatarURL()
+                    })
+                    .setTimestamp();
+
+                // Start playing if not already playing
+                if (!player.playing && !player.paused && !player.queue.size) {
+                    player.play();
+                }
+                
+                return await interaction.editReply({ embeds: [embed] });
+            }
         } catch (err) {
             console.error("Play Command Error:", err);
+            
+            // Detailed error message to help with debugging
             await interaction.editReply({ 
-                content: `${client.emoji.error} An error occurred while playing the song!`,
+                content: `❌ An error occurred while playing the song: ${err.message || "Unknown error"}`,
                 ephemeral: true 
+            });
+            
+            // Log error to console with more details
+            console.error(`Play command error details:`, {
+                user: interaction.user.tag,
+                guild: interaction.guild.name,
+                query: interaction.options.getString('query'),
+                error: err
             });
         }
     },
 };
+
+// Helper function to format duration
+function formatDuration(ms) {
+    const seconds = Math.floor((ms / 1000) % 60);
+    const minutes = Math.floor((ms / (1000 * 60)) % 60);
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+
+    if (hours > 0) {
+        return `\`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}\``;
+    } else {
+        return `\`${minutes}:${seconds.toString().padStart(2, '0')}\``;
+    }
+}
+
+// Helper function to format total duration of multiple tracks
+function formatTotalDuration(tracks) {
+    const totalMs = tracks.reduce((acc, track) => acc + (track.duration || 0), 0);
+    
+    if (totalMs <= 0) return '⏳ Unknown';
+    
+    const seconds = Math.floor((totalMs / 1000) % 60);
+    const minutes = Math.floor((totalMs / (1000 * 60)) % 60);
+    const hours = Math.floor((totalMs / (1000 * 60 * 60)) % 24);
+    const days = Math.floor(totalMs / (1000 * 60 * 60 * 24));
+    
+    if (days > 0) {
+        return `\`${days}d ${hours}h ${minutes}m\``;
+    } else if (hours > 0) {
+        return `\`${hours}h ${minutes}m ${seconds}s\``;
+    } else {
+        return `\`${minutes}m ${seconds}s\``;
+    }
+}

@@ -2,9 +2,9 @@ const { EmbedBuilder } = require('discord.js');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 module.exports = {
-    name: "sex",
+    name: "hug",
     category: "Fun",
-    description: "Intimate interaction with someone 💘 (SFW/NSFW based on channel)",
+    description: "Give someone a hug 💕",
     args: true,
     usage: "<@user>",
     permission: [],
@@ -26,79 +26,41 @@ module.exports = {
                 embeds: [
                     new EmbedBuilder()
                         .setColor('#FF0000')
-                        .setDescription('❌ | You cannot use this command on yourself!')
+                        .setDescription('❌ | You cannot hug yourself! Mention someone else.')
                 ]
             });
         }
 
         try {
-            // Check if channel is NSFW to determine content type
-            const isNsfw = message.channel.nsfw;
             let gifUrl = null;
             
-            if (isNsfw) {
-                // NSFW content for NSFW channels
+            // Try primary API for SFW content
+            try {
+                const apiEndpoint = 'https://api.waifu.pics/sfw/hug';
+                const response = await fetch(apiEndpoint);
+                const data = await response.json();
                 
-                // Try primary API (Waifu.pics) for NSFW content
+                if (data.url) {
+                    gifUrl = data.url;
+                    console.log("Successfully fetched hug content from primary API (Waifu.pics)");
+                }
+            } catch (primaryError) {
+                console.error("Primary API (Waifu.pics) error:", primaryError.message);
+            }
+            
+            // If primary API failed, try backup API
+            if (!gifUrl) {
                 try {
-                    const apiEndpoint = 'https://api.waifu.pics/nsfw/waifu'; // NSFW endpoint
-                    const response = await fetch(apiEndpoint);
-                    const data = await response.json();
+                    const backupEndpoint = 'https://nekos.life/api/v2/img/hug';
+                    const backupResponse = await fetch(backupEndpoint);
+                    const backupData = await backupResponse.json();
                     
-                    if (data.url) {
-                        gifUrl = data.url;
-                        console.log("Successfully fetched NSFW content from primary API (Waifu.pics)");
+                    if (backupData.url) {
+                        gifUrl = backupData.url;
+                        console.log("Successfully fetched hug content from backup API (Nekos.life)");
                     }
-                } catch (primaryError) {
-                    console.error("Primary API (Waifu.pics) NSFW error:", primaryError.message);
-                }
-                
-                // If primary API failed, try backup API
-                if (!gifUrl) {
-                    try {
-                        const backupEndpoint = 'https://nekos.life/api/v2/img/lewd'; // NSFW content from Nekos.life
-                        const backupResponse = await fetch(backupEndpoint);
-                        const backupData = await backupResponse.json();
-                        
-                        if (backupData.url) {
-                            gifUrl = backupData.url;
-                            console.log("Successfully fetched NSFW content from backup API (Nekos.life)");
-                        }
-                    } catch (backupError) {
-                        console.error("Backup API (Nekos.life) NSFW error:", backupError.message);
-                    }
-                }
-            } else {
-                // SFW content for regular channels
-                
-                // Try primary API for SFW content
-                try {
-                    const apiEndpoint = 'https://api.waifu.pics/sfw/hug'; // SFW alternative (hug)
-                    const response = await fetch(apiEndpoint);
-                    const data = await response.json();
-                    
-                    if (data.url) {
-                        gifUrl = data.url;
-                        console.log("Successfully fetched SFW content from primary API (Waifu.pics)");
-                    }
-                } catch (primaryError) {
-                    console.error("Primary API (Waifu.pics) SFW error:", primaryError.message);
-                }
-                
-                // If primary API failed, try backup API
-                if (!gifUrl) {
-                    try {
-                        const backupEndpoint = 'https://nekos.life/api/v2/img/cuddle'; // SFW content from Nekos.life
-                        const backupResponse = await fetch(backupEndpoint);
-                        const backupData = await backupResponse.json();
-                        
-                        if (backupData.url) {
-                            gifUrl = backupData.url;
-                            console.log("Successfully fetched SFW content from backup API (Nekos.life)");
-                        }
-                    } catch (backupError) {
-                        console.error("Backup API (Nekos.life) SFW error:", backupError.message);
-                    }
+                } catch (backupError) {
+                    console.error("Backup API (Nekos.life) error:", backupError.message);
                 }
             }
             
@@ -107,14 +69,7 @@ module.exports = {
                 throw new Error('Failed to fetch content from all sources');
             }
             
-            // Create appropriate message based on channel type
-            let description;
-            
-            if (isNsfw) {
-                description = `🔞 | ${message.author} and ${target} are having a good time...`;
-            } else {
-                description = `💘 | ${message.author} and ${target} are cuddling...`;
-            }
+            const description = `💕 | ${message.author} gives ${target} a warm hug!`;
             
             const embed = new EmbedBuilder()
                 .setColor(client.embedColor)
@@ -123,12 +78,12 @@ module.exports = {
 
             await message.reply({ embeds: [embed] });
         } catch (error) {
-            console.error('Sex Command Error:', error);
+            console.error('Hug Command Error:', error);
             return message.reply({
                 embeds: [
                     new EmbedBuilder()
                         .setColor('#FF0000')
-                        .setDescription('❌ | Failed to fetch content!')
+                        .setDescription('❌ | Failed to fetch hug content!')
                 ]
             });
         }

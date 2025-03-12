@@ -5,6 +5,7 @@ module.exports = {
     name: "handhold",
     category: "Fun",
     description: "Hold someone's hand 👫",
+    alises: ["hh"]
     args: true,
     usage: "<@user>",
     permission: [],

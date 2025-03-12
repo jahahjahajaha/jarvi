@@ -10,10 +10,34 @@ module.exports = {
             const slashCommand = client.slashCommands.get(interaction.commandName);
             if (!slashCommand) return;
 
+            // Log command usage in both Hindi and English
+            const userTag = interaction.user.tag;
+            const userId = interaction.user.id;
+            const guildName = interaction.guild ? interaction.guild.name : "DM";
+            const guildId = interaction.guild ? interaction.guild.id : "DM";
+            const channelName = interaction.channel ? interaction.channel.name : "Unknown";
+            const channelId = interaction.channel ? interaction.channel.id : "Unknown";
+            const commandName = interaction.commandName;
+            const options = interaction.options ? interaction.options.data.map(o => `${o.name}:${o.value}`).join(', ') : "None";
+            
+            // Bilingual log message
+            const logMessage = `Command executed: /${commandName} ${options ? `(${options})` : ""}\n` +
+                               `कमांड निष्पादित: /${commandName} ${options ? `(${options})` : ""}\n\n` +
+                               `User/उपयोगकर्ता: ${userTag} (${userId})\n` +
+                               `Server/सर्वर: ${guildName} (${guildId})\n` +
+                               `Channel/चैनल: ${channelName} (${channelId})`;
+            
+            client.logger.log(logMessage, "cmd");
+
             // Check voice channel requirements
             if (slashCommand.inVoiceChannel && !interaction.member.voice.channel) {
+                const errorMessage = interaction.locale === "hi" ? 
+                    `${client.emoji.error} आपको वॉइस चैनल में होना होगा!` : 
+                    `${client.emoji.error} You need to be in a voice channel!`;
+                
+                client.logger.log(`Command /${commandName} failed: User not in voice channel`, "error");
                 return await interaction.reply({
-                    content: `${client.emoji.error} You need to be in a voice channel!`,
+                    content: errorMessage,
                     ephemeral: true
                 });
             }
@@ -21,8 +45,13 @@ module.exports = {
             // Check same voice channel requirement
             if (slashCommand.sameVoiceChannel && interaction.guild.members.me.voice.channel) {
                 if (interaction.member.voice.channel.id !== interaction.guild.members.me.voice.channel.id) {
+                    const errorMessage = interaction.locale === "hi" ? 
+                        `${client.emoji.error} आपको ${interaction.client.user} के साथ समान चैनल में होना चाहिए!` : 
+                        `${client.emoji.error} You must be in the same channel as ${interaction.client.user}!`;
+                    
+                    client.logger.log(`Command /${commandName} failed: User not in same voice channel as bot`, "error");
                     return await interaction.reply({
-                        content: `${client.emoji.error} You must be in the same channel as ${interaction.client.user}!`,
+                        content: errorMessage,
                         ephemeral: true
                     });
                 }
@@ -31,12 +60,26 @@ module.exports = {
             try {
                 // Execute the command handler
                 await slashCommand.execute(interaction, client);
+                
+                // Log successful command execution
+                client.logger.log(`Command /${commandName} executed successfully by ${userTag}`, "info");
             } catch (error) {
-                console.error("Interaction Command Error:", error);
+                // Log error with details
+                const errorLog = `Command /${commandName} error: ${error.message}\n` +
+                                `Stack: ${error.stack || "No stack trace"}\n` +
+                                `User: ${userTag} (${userId})\n` +
+                                `Server: ${guildName} (${guildId})`;
+                client.logger.log(errorLog, "error");
+                
+                // Get error message in user's language
+                const errorMessage = interaction.locale === "hi" ? 
+                    `${client.emoji.error} इस कमांड को चलाते समय एक त्रुटि हुई!` : 
+                    `${client.emoji.error} An error occurred while executing this command!`;
+                    
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.editReply({ content: `${client.emoji.error} An error occurred while executing this command!` }).catch(() => {});
+                    await interaction.editReply({ content: errorMessage }).catch(() => {});
                 } else {
-                    await interaction.followUp({ content: `${client.emoji.error} An error occurred while executing this command!`, ephemeral: true }).catch(() => {});
+                    await interaction.followUp({ content: errorMessage, ephemeral: true }).catch(() => {});
                 }
             }
         }

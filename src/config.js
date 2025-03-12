@@ -46,6 +46,7 @@ const config = {
     langs: getEnvVar("LANGS", "en"),
     supportServer: "https://discord.gg/tBNezcRHMe",
     mentionPrefix: true,
+    logChannelId: getEnvVar("LOG_CHANNEL_ID", ""),
   },
 
   embed: {
@@ -75,6 +76,7 @@ Object.defineProperties(config, {
   embedColor: { get: () => config.embed.color },
   langs: { get: () => config.bot.langs },
   SUPPORT_SERVER: { get: () => config.bot.supportServer },
+  logChannelId: { get: () => config.bot.logChannelId },
 });
 
 module.exports = config;
