@@ -1,8 +1,9 @@
 const { prefix } = require("../../config.js");
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActivityType } = require('discord.js');
 const os = require('os');
+const StatusMonitor = require('../../utils/statusMonitor');
 
 module.exports = {
     name: "ready",
@@ -12,46 +13,62 @@ module.exports = {
         
         // Create startup info for logs in both Hindi and English
         const serverCount = client.guilds.cache.size;
-        const userCount = client.users.cache.size;
+        const userCount = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
         const commandCount = client.slashCommands.size;
         
-        // Prepare bilingual startup message
+        // Prepare startup message (English only)
         const startupMessage = 
-            `🤖 ${client.user.username} (test) online!\n` +
-            `🤖 ${client.user.username} (टेस्ट) ऑनलाइन है!\n\n` +
+            `🤖 ${client.user.username} (test) online!\n\n` +
             
-            `🌐 Ready on ${serverCount} servers, for a total of ${userCount} users\n` +
-            `🌐 कुल ${userCount} उपयोगकर्ताओं के लिए ${serverCount} सर्वरों पर तैयार है\n\n` +
+            `🌐 Ready on ${serverCount} servers, for a total of ${userCount} users\n\n` +
             
-            `⚙️ Enabled commands (सक्षम कमांड्स): help, play, pause, resume\n` +
-            `🔊 Music engine (संगीत इंजन): Lavalink\n` +
-            `💻 Platform (प्लेटफॉर्म): ${os.platform()} ${os.release()}\n` +
-            `💾 Memory (मेमोरी): ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`;
+            `⚙️ Enabled commands: help, play, pause, resume\n` +
+            `🔊 Music engine: Lavalink\n` +
+            `💻 Platform: ${os.platform()} ${os.release()}\n` +
+            `💾 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`;
         
-        // Log to console with colored format
-        client.logger.log(`${client.user.username} online!`, "ready");
-        client.logger.log(`Ready on ${serverCount} servers, for a total of ${userCount} users`, "ready");
+        // Log to console with colored format using new bilingual logger
+        client.logger.logBilingual(
+            `${client.user.username} online!`, 
+            `${client.user.username} ऑनलाइन है!`, 
+            "ready"
+        );
+        
+        client.logger.logBilingual(
+            `Ready on ${serverCount} servers, for a total of ${userCount} users`,
+            `कुल ${userCount} उपयोगकर्ताओं के लिए ${serverCount} सर्वरों पर तैयार है`,
+            "ready"
+        );
+        
         console.log("[BOT] " + client.user.tag + " is ready!");
 
         // Try to send startup notification to log channel if configured
-        if (client.config.logChannelId) {
+        if (client.config.logs.logChannelId) {
             try {
-                const logChannel = await client.channels.fetch(client.config.logChannelId).catch(() => null);
+                const logChannel = await client.channels.fetch(client.config.logs.logChannelId).catch(() => null);
                 
                 if (logChannel) {
                     const embed = new EmbedBuilder()
                         .setColor('#00FF00')
-                        .setTitle('🚀 Bot Started / बॉट शुरू हुआ')
+                        .setTitle('🚀 Bot Started')
                         .setDescription(startupMessage)
                         .setThumbnail(client.user.displayAvatarURL())
                         .setTimestamp();
                         
                     await logChannel.send({ embeds: [embed] });
-                    client.logger.log(`Sent startup notification to log channel: ${client.config.logChannelId}`, "info");
+                    client.logger.log(`Sent startup notification to log channel: ${client.config.logs.logChannelId}`, "info");
                 }
             } catch (error) {
                 client.logger.log(`Failed to send startup notification: ${error.message}`, "error");
             }
+        }
+        
+        // Initialize bot status monitoring
+        try {
+            client.statusMonitor = new StatusMonitor(client);
+            await client.statusMonitor.init();
+        } catch (error) {
+            client.logger.log(`Failed to initialize status monitor: ${error.stack}`, "error");
         }
         
         // Register slash commands with Discord API
@@ -75,28 +92,39 @@ module.exports = {
             client.logger.log(`Error registering application commands: ${error}`, "error");
         }
 
-        // Status update function
+        // Status update function - updated for Discord.js v14
         function updateStatus() {
             let serverCount = client.guilds.cache.size;
             let userCount = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
             let status = (`${prefix}help | Serving Music in ${serverCount} servers & ${userCount} users` || `Serving Music in ${serverCount} servers & ${userCount} users`);
 
+            // Convert the status type string to ActivityType enum for v14
+            let activityType;
+            switch(client.config.status.type.toUpperCase()) {
+                case 'PLAYING': activityType = ActivityType.Playing; break;
+                case 'STREAMING': activityType = ActivityType.Streaming; break;
+                case 'LISTENING': activityType = ActivityType.Listening; break;
+                case 'WATCHING': activityType = ActivityType.Watching; break;
+                case 'COMPETING': activityType = ActivityType.Competing; break;
+                default: activityType = ActivityType.Playing;
+            }
+
             client.user.setPresence({
                 activities: [
                     {
                         name: status,
-                        type: (client.config.status.type || `STREAMING`),
-                        url: (client.config.status.url || `https://www.youtube.com/watch?v=8kfP22meDL0`)
+                        type: activityType,
+                        url: client.config.status.url || "https://www.youtube.com/watch?v=8kfP22meDL0"
                     }
                 ],
-                status: (client.config.status.name || "online")
+                status: client.config.status.name || "online"
             });
         }
 
-        // Pehli baar status set karega
+        // First time status update
         updateStatus();
 
-        // Har 10 seconds me status update karega
+        // Update status every 10 seconds
         setInterval(updateStatus, 10000);
     }
 };

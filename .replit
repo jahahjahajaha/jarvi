@@ -27,7 +27,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm install discord.js @discordjs/voice play-dl && node index.js"
+args = "node --no-warnings index.js"
 
 [deployment]
-run = ["sh", "-c", "npm install discord.js @discordjs/voice @discordjs/opus play-dl ffmpeg-static && node index.js"]
+run = ["sh", "-c", "node --no-warnings index.js"]

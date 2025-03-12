@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 const moment = require('moment-timezone');
 require("./PlayerBase"); 
 require("../utils/lavamusic");
+const StatusMonitor = require("../utils/statusMonitor");
 
 class MusicBot extends Client {
     constructor() {
@@ -159,17 +160,31 @@ class MusicBot extends Client {
     }
 
     loadEvents() {
+        // Load Client events (bot core events)
         readdirSync("./src/events/Client/").forEach(file => {
             const event = require(`../events/Client/${file}`);
             let eventName = file.split(".")[0];
-            this.logger.log(`Loading Events ${eventName}`, "event");
+            this.logger.log(`Loading Client Events ${eventName}`, "event");
             this.on(event.name, (...args) => event.run(this, ...args));
         });
 
+        // Load Guild events (member join/leave, etc.)
+        try {
+            readdirSync("./src/events/Guild/").forEach(file => {
+                const event = require(`../events/Guild/${file}`);
+                let eventName = file.split(".")[0];
+                this.logger.log(`Loading Guild Events ${eventName}`, "event");
+                this.on(event.name, (...args) => event.run(this, ...args));
+            });
+        } catch (error) {
+            this.logger.log(`Error loading Guild events: ${error.message}`, "error");
+        }
+
+        // Load Lavalink events (music player)
         readdirSync("./src/events/Lavalink/").forEach(file => {
             const event = require(`../events/Lavalink/${file}`);
             let eventName = file.split(".")[0];
-            this.logger.log(`Loading Events Lavalink ${eventName}`, "event");
+            this.logger.log(`Loading Lavalink Events ${eventName}`, "event");
             this.manager.on(eventName, event.bind(null, this));
         });
     }
@@ -189,20 +204,24 @@ class MusicBot extends Client {
     }
     
     loadSlashCommands() {
-        // Only load specific slash commands as requested
+        // Only load specific slash commands as requested - family-friendly music bot
         const allowedCommands = ['help', 'play', 'pause', 'resume'];
+        
+        // Track count of commands for logging
+        let loadedCount = 0;
+        let restrictedCount = 0;
         
         // Process each slash command file
         readdirSync("./src/slashCommands/").forEach(file => {
-            // Only process JS files
+            // Skip non-JS files silently
             if (!file.endsWith('.js')) return;
             
             // Get the command name from the file name
             const commandName = file.split('.')[0];
             
-            // Skip if not in allowed commands list
+            // Skip if not in allowed commands list - without warnings
             if (!allowedCommands.includes(commandName)) {
-                this.logger.log(`Skipping slash command: ${commandName} (restricted)`, "warn");
+                restrictedCount++;
                 return;
             }
             
@@ -215,12 +234,14 @@ class MusicBot extends Client {
                 
                 this.logger.log(`Loading slash command: ${commandName}`, "cmd");
                 this.slashCommands.set(commandName, command);
+                loadedCount++;
             } catch (error) {
                 this.logger.log(`Error loading slash command ${file}: ${error.message}`, "error");
             }
         });
         
-        this.logger.log(`Loaded ${this.slashCommands.size} slash commands`, "ready");
+        // Log summary without mentioning restricted commands
+        this.logger.log(`Loaded ${loadedCount} slash commands successfully!`, "ready");
     }
 
     createEmbed(title, description, fields = []) {

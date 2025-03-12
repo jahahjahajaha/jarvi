@@ -5,6 +5,18 @@ const i18n = require("../../utils/i18n");
 module.exports = {
     name: "interactionCreate",
     run: async (client, interaction) => {
+        // Handle status monitor button interactions
+        if (interaction.isButton() && interaction.customId === "refresh_status") {
+            if (client.statusMonitor) {
+                try {
+                    await client.statusMonitor.handleStatusInteraction(interaction);
+                    return;
+                } catch (error) {
+                    client.logger.log(`Status refresh button error: ${error.message}`, "error");
+                }
+            }
+        }
+        
         // Process only if it's a command or context menu interaction
         if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
             const slashCommand = client.slashCommands.get(interaction.commandName);
@@ -20,14 +32,12 @@ module.exports = {
             const commandName = interaction.commandName;
             const options = interaction.options ? interaction.options.data.map(o => `${o.name}:${o.value}`).join(', ') : "None";
             
-            // Bilingual log message
-            const logMessage = `Command executed: /${commandName} ${options ? `(${options})` : ""}\n` +
-                               `कमांड निष्पादित: /${commandName} ${options ? `(${options})` : ""}\n\n` +
-                               `User/उपयोगकर्ता: ${userTag} (${userId})\n` +
-                               `Server/सर्वर: ${guildName} (${guildId})\n` +
-                               `Channel/चैनल: ${channelName} (${channelId})`;
-            
-            client.logger.log(logMessage, "cmd");
+            // Use bilingual logger
+            client.logger.logBilingual(
+                `Command executed: /${commandName} ${options ? `(${options})` : ""} by ${userTag} in ${guildName} (${channelName})`,
+                `कमांड निष्पादित: /${commandName} ${options ? `(${options})` : ""} ${userTag} द्वारा ${guildName} (${channelName}) में`,
+                "cmd"
+            );
 
             // Check voice channel requirements
             if (slashCommand.inVoiceChannel && !interaction.member.voice.channel) {

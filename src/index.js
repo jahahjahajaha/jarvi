@@ -16,16 +16,57 @@ if (client.api?.topggapi) {
     client.topgg = new Topgg.Api(client.api.topggapi);
 }
 
-// Handle uncaught errors - improved error handling
-process.on('unhandledRejection', (error) => {
-    console.error('Unhandled promise rejection:', error);
-    // Don't exit the process, just log the error
+// Enhanced error handling system with logging to Discord channels (if possible)
+process.on('unhandledRejection', async (error) => {
+    console.error('[ERROR] Unhandled promise rejection:', error);
+    
+    try {
+        // Try to log to Discord if client is ready and logger is initialized
+        if (client.isReady() && client.logger) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('🔥 Error: Unhandled Promise Rejection')
+                .setDescription(`\`\`\`js\n${error.stack ? error.stack.substring(0, 4000) : error}\n\`\`\``)
+                .addFields([
+                    { name: '⏰ Timestamp', value: new Date().toISOString() },
+                    { name: '📊 Memory Usage', value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB` }
+                ])
+                .setTimestamp();
+                
+            // Log to Discord channel if possible
+            await client.logger.sendToLogChannel({ embeds: [errorEmbed] }, 'error');
+        }
+    } catch (logError) {
+        console.error('Failed to log error to Discord:', logError);
+    }
+    // Don't exit the process, maintain stability
 });
 
-// Handle uncaught exceptions to prevent crashes
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught exception:', error);
-    // Don't exit the process, just log the error
+// Enhanced exception handler with bilingual support
+process.on('uncaughtException', async (error) => {
+    console.error('[CRITICAL] Uncaught exception:', error);
+    
+    try {
+        // Log to Discord if possible
+        if (client.isReady() && client.logger) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('⚠️ Critical Error: Uncaught Exception')
+                .setDescription(`\`\`\`js\n${error.stack ? error.stack.substring(0, 4000) : error}\n\`\`\``)
+                .addFields([
+                    { name: '⏰ Timestamp', value: new Date().toISOString() },
+                    { name: '📊 Memory Usage', value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB` },
+                    { name: '💡 Recovery', value: 'Bot will attempt to continue operation. If issues persist, please contact support.' }
+                ])
+                .setTimestamp();
+                
+            // Log to Discord channel if possible
+            await client.logger.sendToLogChannel({ embeds: [errorEmbed] }, 'error');
+        }
+    } catch (logError) {
+        console.error('Failed to log critical error to Discord:', logError);
+    }
+    // Don't exit to maintain stability - serious errors will still show in console
 });
 
 // Add extra exit handlers to prevent accidental shutdown

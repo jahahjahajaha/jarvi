@@ -91,19 +91,34 @@ module.exports = {
                     `सभी गानों को देखने के लिए /queue का उपयोग करें` : 
                     `Use /queue to see all songs in the queue`;
                 
+                // Get the optimal thumbnail image from the playlist
+                const thumbnail = res.playlist.thumbnail || res.tracks[0].thumbnail || 
+                                 `https://img.youtube.com/vi/${res.tracks[0].identifier}/maxresdefault.jpg`;
+                
+                // Create a beautiful playlist embed with enhanced visuals
                 const playlistEmbed = new EmbedBuilder()
                     .setColor(client.embedColor)
-                    .setTitle(playlistTitle)
-                    .setDescription(`**${res.playlist.name}**`)
-                    .setThumbnail(res.tracks[0].thumbnail || `https://img.youtube.com/vi/${res.tracks[0].identifier}/maxresdefault.jpg`)
+                    .setAuthor({ 
+                        name: playlistTitle, 
+                        iconURL: client.user.displayAvatarURL() 
+                    })
+                    .setTitle(res.playlist.name)
+                    .setURL(res.playlist.uri || res.tracks[0].uri)
+                    .setDescription(`${useHindi ? '🎶 प्लेलिस्ट में से पहला गाना जल्द ही बजेगा' : '🎶 First song from the playlist will play soon'}`)
+                    .setThumbnail(thumbnail)
                     .addFields([
-                        { name: totalTracksLabel, value: `${res.tracks.length} ${songsText}`, inline: true },
+                        { name: totalTracksLabel, value: `\`${res.tracks.length}\` ${songsText}`, inline: true },
                         { name: durationLabel, value: formatTotalDuration(res.tracks), inline: true },
-                        { name: requestedByLabel, value: `${interaction.user}`, inline: true }
+                        { name: requestedByLabel, value: `${interaction.user}`, inline: true },
+                        { 
+                            name: useHindi ? '💿 प्लेलिस्ट स्रोत' : '💿 Playlist Source', 
+                            value: `\`${res.playlist.source || 'YouTube'}\``, 
+                            inline: true 
+                        }
                     ])
                     .setFooter({ 
                         text: footerText, 
-                        iconURL: client.user.displayAvatarURL() 
+                        iconURL: interaction.user.displayAvatarURL() 
                     })
                     .setTimestamp();
                 
@@ -132,11 +147,29 @@ module.exports = {
                     `अधिक नियंत्रण के लिए /nowplaying टाइप करें` : 
                     `Type /nowplaying for more controls`;
                 
+                // Check if track is family-friendly (basic check)
+                const isFriendly = !track.title.toLowerCase().includes("explicit") &&
+                                  !track.title.toLowerCase().includes("parental advisory");
+                
+                // Set thumbnail with fallback options
+                const thumbnail = track.thumbnail || 
+                                 `https://img.youtube.com/vi/${track.identifier}/maxresdefault.jpg`;
+                
+                // Create enhanced embed for single track
                 const embed = new EmbedBuilder()
                     .setColor(client.embedColor)
-                    .setTitle(trackTitle)
-                    .setDescription(`[${track.title}](${track.uri})`)
-                    .setThumbnail(track.thumbnail || `https://img.youtube.com/vi/${track.identifier}/maxresdefault.jpg`)
+                    .setAuthor({ 
+                        name: trackTitle, 
+                        iconURL: client.user.displayAvatarURL() 
+                    })
+                    .setTitle(track.title)
+                    .setURL(track.uri)
+                    .setDescription(
+                        `${useHindi ? '🎵 **कलाकार**: ' : '🎵 **Artist**: '} ${track.author || unknownText}\n` +
+                        `${useHindi ? '🔊 **स्रोत**: ' : '🔊 **Source**: '} \`${track.source || 'YouTube'}\`\n` +
+                        `${isFriendly ? '👪 Family-Friendly' : ''}`
+                    )
+                    .setThumbnail(thumbnail)
                     .addFields([
                         { 
                             name: durationLabel, 
@@ -144,24 +177,21 @@ module.exports = {
                             inline: true 
                         },
                         {
-                            name: artistLabel, 
-                            value: track.author || unknownText,
+                            name: positionLabel,
+                            value: player.queue.size === 0 ? 
+                                `\`${nowPlayingText}\`` : 
+                                `\`#${player.queue.size}\` ${useHindi ? 'में कतार' : 'in queue'}`,
                             inline: true
                         },
                         {
                             name: requestedByLabel,
                             value: `${interaction.user}`,
                             inline: true
-                        },
-                        {
-                            name: positionLabel,
-                            value: player.queue.size === 0 ? nowPlayingText : `#${player.queue.size}`,
-                            inline: true
                         }
                     ])
                     .setFooter({ 
                         text: footerText,
-                        iconURL: client.user.displayAvatarURL()
+                        iconURL: interaction.user.displayAvatarURL()
                     })
                     .setTimestamp();
 

@@ -66,22 +66,34 @@ module.exports = {
         // Get current song information
         const song = player.queue.current;
         
-        // Create bilingual success message
-        const pausedText = useHindi 
-            ? `⏸️ रोका गया [${song.title}](${song.uri})` 
-            : `⏸️ Paused [${song.title}](${song.uri})`;
+        // Create enhanced bilingual messages
+        const pausedTitle = useHindi 
+            ? "▶️ संगीत रोका गया" 
+            : "▶️ Music Paused";
+            
+        const thumbnailUrl = song.thumbnail || 
+                           `https://img.youtube.com/vi/${song.identifier}/maxresdefault.jpg`;
+                           
+        const pausedDescription = useHindi 
+            ? `⏸️ गाना रोका गया है\n\n**गाना**: [${song.title}](${song.uri})\n**कलाकार**: ${song.author || 'अज्ञात'}\n\n▶️ गाना फिर से शुरू करने के लिए \`/resume\` कमांड का उपयोग करें` 
+            : `⏸️ Song has been paused\n\n**Title**: [${song.title}](${song.uri})\n**Artist**: ${song.author || 'Unknown'}\n\n▶️ Use \`/resume\` command to continue playback`;
             
         const footerText = useHindi
-            ? `${interaction.user.tag} द्वारा अनुरोधित`
-            : `Requested by ${interaction.user.tag}`;
+            ? `${interaction.user.tag} द्वारा अनुरोधित • संगीत बॉट`
+            : `Requested by ${interaction.user.tag} • Music Bot`;
         
-        // Create a rich embed response with bilingual support
+        // Create an enhanced rich embed response with bilingual support
         const embed = new EmbedBuilder()
             .setColor(client.embedColor)
-            .setDescription(pausedText)
+            .setAuthor({ 
+                name: pausedTitle,
+                iconURL: client.user.displayAvatarURL() 
+            })
+            .setThumbnail(thumbnailUrl)
+            .setDescription(pausedDescription)
             .setFooter({ 
                 text: footerText, 
-                iconURL: interaction.user.displayAvatarURL({ dynamic: true }) 
+                iconURL: interaction.user.displayAvatarURL() 
             })
             .setTimestamp();
 
