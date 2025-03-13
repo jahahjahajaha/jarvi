@@ -1,11 +1,86 @@
 const { EmbedBuilder } = require('discord.js');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
+/**
+ * Get a slap GIF URL from multiple APIs
+ * Uses multiple sources for better reliability
+ * @returns {Promise<string|null>} - GIF URL or null if all APIs fail
+ */
+async function getSlapGif() {
+    const apis = [
+        // Primary API - Waifu.pics
+        {
+            url: 'https://api.waifu.pics/sfw/slap',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.url;
+            },
+            name: 'Waifu.pics'
+        },
+        // Backup API - Nekos.life
+        {
+            url: 'https://nekos.life/api/v2/img/slap',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.url;
+            },
+            name: 'Nekos.life'
+        },
+        // Another backup API - Some-Random-API
+        {
+            url: 'https://some-random-api.ml/animu/slap',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.link;
+            },
+            name: 'Some-Random-API'
+        },
+        // Another backup API - anime-api
+        {
+            url: 'https://anime-api.hisoka17.repl.co/img/slap',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.url;
+            },
+            name: 'anime-api'
+        },
+        // Another backup - purrbot api
+        {
+            url: 'https://purrbot.site/api/img/sfw/slap/gif',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.link;
+            },
+            name: 'Purrbot API'
+        }
+    ];
+    
+    // Try each API until we get a valid URL
+    for (const api of apis) {
+        try {
+            const response = await fetch(api.url);
+            if (response.ok) {
+                const url = await api.handler(response);
+                if (url) {
+                    console.log(`Successfully fetched slap GIF from ${api.name}`);
+                    return url;
+                }
+            }
+        } catch (error) {
+            console.error(`${api.name} API error:`, error.message);
+        }
+    }
+    
+    // If all APIs failed, return null
+    return null;
+}
+
 module.exports = {
     name: "slap",
     category: "Fun",
     description: "Slap someone who deserves it 👋",
     args: true,
+    aliases: ["smack", "hit", "whack", "spank"],
     usage: "<@user>",
     permission: [],
     owner: false,
@@ -32,41 +107,10 @@ module.exports = {
         }
 
         try {
-            const isNsfw = message.channel.nsfw;
-            let gifUrl = null;
+            // Get a GIF from one of our API sources
+            const gifUrl = await getSlapGif();
             
-            // Try primary API (Waifu.pics)
-            try {
-                // Waifu.pics has only SFW slap
-                const apiEndpoint = 'https://api.waifu.pics/sfw/slap';
-                const response = await fetch(apiEndpoint);
-                const data = await response.json();
-                
-                if (data.url) {
-                    gifUrl = data.url;
-                    console.log("Successfully fetched slap GIF from primary API (Waifu.pics)");
-                }
-            } catch (primaryError) {
-                console.error("Primary API (Waifu.pics) error:", primaryError.message);
-            }
-            
-            // If primary API failed, try backup API (Nekos.life)
-            if (!gifUrl) {
-                try {
-                    const backupEndpoint = 'https://nekos.life/api/v2/img/slap';
-                    const backupResponse = await fetch(backupEndpoint);
-                    const backupData = await backupResponse.json();
-                    
-                    if (backupData.url) {
-                        gifUrl = backupData.url;
-                        console.log("Successfully fetched slap GIF from backup API (Nekos.life)");
-                    }
-                } catch (backupError) {
-                    console.error("Backup API (Nekos.life) error:", backupError.message);
-                }
-            }
-            
-            // If both APIs failed, throw error
+            // If no GIF URL found, throw error
             if (!gifUrl) {
                 throw new Error('Failed to fetch GIF from all sources');
             }

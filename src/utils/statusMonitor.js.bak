@@ -2,82 +2,81 @@ const {
     EmbedBuilder, 
     ActionRowBuilder, 
     ButtonBuilder, 
-    ButtonStyle, 
-    StringSelectMenuBuilder, 
-    StringSelectMenuOptionBuilder 
+    ButtonStyle,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder
 } = require('discord.js');
+const os = require('os');
 const systeminformation = require('systeminformation');
 const moment = require('moment');
-require('moment-duration-format');
-const os = require('os');
-require('dotenv').config();
+const config = require('../config');
+const Logger = require('./logger');
+const { version } = require('../../package.json');
 
 /**
- * COMPLETE REWRITE: Enhanced Status Monitor for Bot Health
+ * Enhanced Status Monitor for Bot Health
  * Provides real-time monitoring, advanced analytics, and interactive controls
  * in a dedicated Discord channel
- * 
- * SINGLETON IMPLEMENTATION: This is a complete rewrite to ensure there can only be 
- * one active instance at a time, with proper channel synchronization
  */
-
-// CRITICAL: Global instance store to ensure singleton pattern
-let _instance = null;
-
 class StatusMonitor {
-    /**
-     * Get Singleton instance - this is critical to prevent duplicate messages
-     * @param {Client} client - Discord.js client
-     * @returns {StatusMonitor} The singleton instance
-     */
-    static getInstance(client) {
-        if (!_instance) {
-            _instance = new StatusMonitor(client);
-            console.log("[STATUS] Created NEW singleton StatusMonitor instance");
-        } else if (client && !_instance.client) {
-            _instance.client = client;
-            console.log("[STATUS] Updated existing StatusMonitor instance with client");
-        }
-        return _instance;
-    }
-    
-    /**
-     * Private constructor - NEVER call directly, use getInstance()
-     */
     constructor(client) {
-        // Prevent direct instantiation
-        if (_instance) {
-            console.error("[STATUS] StatusMonitor is a singleton! Use getInstance() instead");
-            return _instance;
-        }
-        
-        // Client and timing
         this.client = client;
-        this.startTime = Date.now();
         
-        // Channel and message references
-        this.statusChannel = null;
-        this.controlChannel = null;
+        // Initialize configuration with defaults
+        this.config = {
+            // First try client config, then module config, then defaults
+            ...(client.config?.monitoring || config.monitoring || {}), 
+            
+            // Ensure these required settings exist
+            updateInterval: 3000, // 3 seconds
+            recreateInterval: 900000, // 15 minutes
+            
+            // Ensure health check settings
+            healthChecks: {
+                memoryThreshold: 90,
+                cpuThreshold: 90,
+                playerThreshold: 1000,
+                healthyEmoji: '✅',
+                warningEmoji: '⚠️',
+                criticalEmoji: '🔥'
+            },
+            
+            // Default monitoring display properties
+            displayMode: 'default',
+            showRefreshButton: true,
+            showControls: true,
+            
+            // Developer security settings
+            developerIds: [
+                ...(client.config?.ownerID ? [client.config.ownerID] : []), 
+                ...(config.ownerID ? [config.ownerID] : []),
+                '450889132297396225', // Default bot developer ID
+            ],
+            
+            // Message persistence config
+            persistMessage: true,
+            stabilityMode: true,
+            deleteOldStatusMessages: true,
+            maxMessagesToDelete: 10
+        };
+        
+        // Message instances
         this.statusMessage = null;
         this.controlsMessage = null;
-        
-        // Monitoring state
         this.monitoringInterval = null;
-        this.lastUpdate = 0;
+        this.statusChannel = null;
+        
+        // Timing trackers
+        this.lastUpdate = Date.now();
+        this.startTime = Date.now();
+        this.lastRestartTime = Date.now();
+        
+        // State flags
+        this.cleanupCompleted = false;
+        this.startupCleanupCompleted = false;
         this.isPaused = false;
-        this.displayMode = 'default'; // 'default', 'minimal', or 'detailed'
         
-        // Critical flags with sensible defaults
-        this._isInitializing = false;  // Lock to prevent concurrent initialization
-        this._updatingStatus = false;  // Lock for concurrent status updates
-        this._updatingControls = false; // Lock for concurrent controls updates
-        
-        // Command and error tracking for reliability metrics
-        this.cmdExecutionCount = 0;
-        this.errorCount = 0;
-        
-        // Historical data for trend analysis
-        this.maxHistoricalDataPoints = 30;
+        // Analytics data
         this.historicalData = {
             cpu: [],
             memory: [],
@@ -85,138 +84,100 @@ class StatusMonitor {
             users: [],
             guilds: []
         };
-        
-        // Default configuration
-        this.config = {
-            enabled: true,
-            statusChannelId: process.env.BOT_STATUS_CHANNEL,
-            controlChannelId: process.env.CONTROL_PANEL_CHANNEL,
-            updateInterval: 3000, // 3 seconds
-            recreateInterval: 900000, // 15 minutes (only for editing refresh, not recreation)
-            persistMessage: true,
-            statusMessageId: null,
-            controlsMessageId: null,
-            deleteOnStartup: true,
-            deleteOldStatusMessages: true,
-            maxMessagesToDelete: 99, // Limit to 99 to avoid rate limits
-            stabilityMode: true, // Prefer edit over recreate
-            showControls: true,
-            showTrends: true,
-            developerIds: [process.env.OWNERID], // Add owner ID from env
-            healthChecks: {
-                memoryThreshold: 90,
-                cpuThreshold: 90,
-                playerThreshold: 50,
-                warningThreshold: 70,
-                healthyEmoji: "✅",
-                warningEmoji: "⚠️",
-                criticalEmoji: "❌"
-            }
-        };
-
-        // Try to parse extra developer IDs if specified in config
-        try {
-            if (process.env.DEV_ROLE) {
-                // If a dev role is specified, we'll check it during developer validation
-                this.config.devRoleId = process.env.DEV_ROLE;
-            }
-        } catch (err) {
-            console.error(`[ERROR] Failed to parse developer IDs: ${err.message}`);
-        }
+        this.maxHistoricalDataPoints = 20; // Store up to 20 data points for trends
+        this.cmdExecutionCount = 0;
+        this.errorCount = 0;
     }
 
     /**
-     * Initialize the status monitor - COMPLETE REWRITE FOR RELIABILITY
+     * Initialize the status monitor
      */
     async init() {
-        // Check if monitoring is even enabled
         if (!this.config.enabled) {
             console.log("[STATUS] Status monitoring is disabled in config");
             return;
         }
-        
-        // CRITICAL: Don't run full init if already initialized to prevent duplicate messages
-        if (this.isInitialized) {
-            console.log("[INFO] Status monitoring already initialized, skipping initialization...");
-            return;
-        }
 
         try {
-            // Set initialization flag FIRST to prevent parallel initialization
-            this.isInitialized = true;
-            
-            console.log("[STATUS] Beginning status monitor initialization...");
-            
-            // STEP 1: Fetch and validate channels
+            // Fetch status channel
             this.statusChannel = await this.client.channels.fetch(this.config.statusChannelId).catch(() => null);
             if (!this.statusChannel) {
                 console.log("[ERROR] Status channel not found! Monitoring disabled.");
                 return;
             }
             
-            this.controlChannel = await this.client.channels.fetch(this.config.controlChannelId).catch(() => null);
-            if (!this.controlChannel) {
-                console.log("[WARN] Control channel not found. Using status channel for both monitoring and controls.");
-                this.controlChannel = this.statusChannel;
-            }
+            // Update channel name to show bot is online (🔴 -> 🟢)
+            await this.updateChannelStatusIndicator();
             
-            // STEP 2: Update channel status indicator (only for monitoring channel)
-            await this.updateChannelStatusIndicator(this.statusChannel);
+            // We'll use a more careful approach to cleaning up old messages
+            // Delete only enough to make room for our 2 panels
+            this.controlsMessage = null;
             
-            // STEP 3: Clean up both channels ONCE (completely)
-            console.log("[STATUS] Performing one-time channel cleanup...");
+            // Clean up with a limited number to avoid rate limits
+            await this.cleanupStatusChannel(99);
+            this.startupCleanupCompleted = true;
             
-            await this.cleanupStatusChannel(this.statusChannel, 99);
+            // Reset the cleanup status
+            this.cleanupCompleted = false;
             
-            if (this.controlChannel !== this.statusChannel) {
-                await this.cleanupStatusChannel(this.controlChannel, 99);
-            }
-            
-            // STEP 4: Create status message in monitoring channel
-            console.log("[STATUS] Creating initial status message...");
-            
-            // Force null to ensure we create a new message
+            // Force creation of a new status message
             this.statusMessage = null;
             
-            // Create initial status message
+            // Try to find existing status message if we want to persist it
+            if (this.config.persistMessage && this.config.statusMessageId) {
+                try {
+                    this.statusMessage = await this.statusChannel.messages.fetch(this.config.statusMessageId);
+                    console.log(`[INFO] Found existing status message: ${this.config.statusMessageId}`);
+                } catch (err) {
+                    console.log(`[INFO] Could not find existing status message: ${err.message}`);
+                    this.statusMessage = null;
+                }
+            }
+            
+            // Try to find existing controls message if we want to persist it
+            if (this.config.persistMessage && this.config.controlsMessageId) {
+                try {
+                    this.controlsMessage = await this.statusChannel.messages.fetch(this.config.controlsMessageId);
+                    console.log(`[INFO] Found existing controls message: ${this.config.controlsMessageId}`);
+                } catch (err) {
+                    console.log(`[INFO] Could not find existing controls message: ${err.message}`);
+                    this.controlsMessage = null;
+                }
+            }
+            
+            // Create both status message and controls message
             await this.updateStatus();
             
-            // STEP 5: Create controls panel in control channel (once only)
-            if (this.config.showControls && !this.controlsInitialized) {
-                console.log("[STATUS] Creating control panel...");
-                
-                // Create the controls message
+            // Create controls message if it doesn't exist yet
+            if (!this.controlsMessage && this.config.showControls) {
                 const controls = this.createInteractiveControls();
-                this.controlsMessage = await this.controlChannel.send(controls);
+                this.controlsMessage = await this.statusChannel.send(controls);
                 
-                // Set flag to prevent recreation
-                this.controlsInitialized = true;
+                if (this.config.persistMessage) {
+                    this.config.controlsMessageId = this.controlsMessage.id;
+                }
                 
                 console.log(`[INFO] Created controls panel message at ${new Date().toISOString()}`);
             }
 
-            // STEP 6: Start periodic monitoring updates
+            // Start periodic updates
             this.startMonitoring();
 
-            console.log("[READY] Bot status monitoring system fully initialized");
+            console.log("[READY] Bot status monitoring system initialized");
         } catch (error) {
             console.error(`[ERROR] Failed to initialize status monitoring: ${error.message}`);
-            // Reset initialization flag if we failed, so we can try again
-            this.isInitialized = false;
         }
     }
     
     /**
      * Update the channel status indicator emoji (🔴 -> 🟢)
      * Shows that the bot is online by updating channel name
-     * @param {TextChannel} channel - The channel to update
      */
-    async updateChannelStatusIndicator(channel) {
-        // Only change status for monitoring channel, not control channel
-        if (!channel || !channel.manageable || channel.id === this.config.controlChannelId) return;
+    async updateChannelStatusIndicator() {
+        if (!this.statusChannel || !this.statusChannel.manageable) return;
         
         try {
-            const currentName = channel.name;
+            const currentName = this.statusChannel.name;
             
             // If the channel already has the online indicator, do nothing
             if (currentName.includes('🟢')) {
@@ -233,7 +194,7 @@ class StatusMonitor {
             }
             
             // Update channel name
-            await channel.setName(newName);
+            await this.statusChannel.setName(newName);
             console.log(`[INFO] Updated status channel name: ${currentName} -> ${newName}`);
         } catch (error) {
             console.error(`[ERROR] Failed to update channel status indicator: ${error.message}`);
@@ -241,25 +202,27 @@ class StatusMonitor {
     }
     
     /**
-     * Clean up the channel by deleting messages
-     * @param {TextChannel} channel - The channel to clean up
+     * Clean up the status channel by deleting all messages
      * @param {Number} limit - Maximum number of messages to delete
      */
-    async cleanupStatusChannel(channel, limit = 100) {
+    async cleanupStatusChannel(limit = 100) {
         try {
-            if (!channel) return;
+            if (!this.statusChannel) return;
             
-            console.log(`[INFO] Cleaning up channel ${channel.name} - deleting old messages...`);
+            // We want to clean up every time the bot restarts, so removed the cleanupCompleted check
+            // to ensure messages are always deleted
+            
+            console.log(`[INFO] Cleaning up status channel - deleting old messages...`);
             
             // Fetch messages (up to the limit)
-            const messages = await channel.messages.fetch({ limit });
+            const messages = await this.statusChannel.messages.fetch({ limit });
             
             // If we have messages to delete
             if (messages.size > 0) {
                 // Use bulkDelete for messages less than 14 days old
                 try {
-                    await channel.bulkDelete(messages);
-                    console.log(`[INFO] Bulk deleted ${messages.size} messages from ${channel.name}`);
+                    await this.statusChannel.bulkDelete(messages);
+                    console.log(`[INFO] Bulk deleted ${messages.size} messages from status channel`);
                 } catch (bulkError) {
                     // If bulk delete fails (messages older than 14 days), delete one by one
                     console.log(`[WARN] Bulk delete failed, deleting one by one: ${bulkError.message}`);
@@ -278,12 +241,14 @@ class StatusMonitor {
                     }
                     
                     if (deleteCount > 0) {
-                        console.log(`[INFO] Deleted ${deleteCount} old messages one by one from ${channel.name}`);
+                        console.log(`[INFO] Deleted ${deleteCount} old messages one by one from status channel`);
                     }
                 }
             }
+            
+            // We've removed the cleanupCompleted flag to ensure messages are always cleaned up
         } catch (error) {
-            console.error(`[ERROR] Failed to clean up channel ${channel?.name}: ${error.message}`);
+            console.error(`[ERROR] Failed to clean up status channel: ${error.message}`);
         }
     }
 
@@ -320,21 +285,10 @@ class StatusMonitor {
     }
 
     /**
-     * Update the status message - ONLY updates the monitoring panel, not control panel
-     * This is now optimized to prevent duplicate messages
+     * Update the status message
      */
     async updateStatus() {
-        // Skip if status channel not found
         if (!this.statusChannel) return;
-        
-        // Critical optimization: make sure we're not already processing a status update
-        if (this._updatingStatus) {
-            console.log("[STATUS] Status update already in progress, skipping duplicate request");
-            return;
-        }
-        
-        // Set lock flag to prevent concurrent updates
-        this._updatingStatus = true;
 
         try {
             // Get system information for health check
@@ -366,15 +320,15 @@ class StatusMonitor {
             // Calculate reliability score
             const reliabilityScore = this.calculateReliabilityScore();
             
-            // Check if we need to recreate the status message (based on config interval)
-            // Only recreate status message if it doesn't exist or if it's been too long
-            const shouldRecreateStatusMessage = 
+            // Check if we need to recreate the message (based on config interval)
+            // Only recreate if specified in config or if the message doesn't exist
+            const shouldRecreateMessage = 
                 !this.statusMessage || 
                 (this.config.recreateInterval && 
                  Date.now() - this.lastUpdate > this.config.recreateInterval);
                 
             // Reset cleanup flag only if we're using deletion-based recreation
-            if (shouldRecreateStatusMessage && this.config.deleteOldStatusMessages) {
+            if (shouldRecreateMessage && this.config.deleteOldStatusMessages) {
                 this.cleanupCompleted = false;
             }
             
@@ -407,27 +361,6 @@ class StatusMonitor {
             const voiceConnections = this.client.manager?.players?.size || 0;
             // Always show ✅ for voice status - client requested
             const voiceStatus = '✅';
-            
-            // No message content by default
-            let messageContent = '';
-            
-            // Components array for buttons
-            let components = [];
-            
-            // Add a refresh button directly to the monitoring panel
-            // But only enable it when auto-monitoring is paused
-            const monitoringRefreshRow = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('status_refresh')
-                        .setLabel('Refresh Now')
-                        .setStyle(ButtonStyle.Primary)
-                        .setEmoji('🔄')
-                        .setDisabled(!this.isPaused) // Only enable when auto-monitoring is paused
-                );
-                
-            // Add this button row to components
-            components.push(monitoringRefreshRow);
             
             // Generate embedbuilder based on display mode
             let embed;
@@ -501,45 +434,81 @@ class StatusMonitor {
                                     `${voiceStatus} **Voice:** \`${voiceConnections} connections\``,
                                     `🔊 **Players:** \`${playerCount}\` active`
                                 ].join('\n'),
-                                inline: true
+                                inline: false
                             },
                             {
-                                name: "🔄 Auto-Refresh Status",
-                                value: this.isPaused 
-                                    ? "⚠️ Auto-monitoring is paused. Use the refresh button above to manually update status."
-                                    : `✅ Status auto-updates every ${this.config.updateInterval/1000} seconds.`,
+                                name: "⚙️ System Health",
+                                value: [
+                                    `🔰 **Reliability Score:** \`${reliabilityScore}/100\``,
+                                    `📊 **System Load:** \`${this.systemLoadLevel(cpuUsagePercent)}\``,
+                                    `🧠 **Memory Usage:** \`${this.memoryUsageLevel(memoryUsagePercent)}\``
+                                ].join('\n'),
                                 inline: false
                             }
                         ])
                         .setFooter({ 
-                            text: `${this.isPaused ? 'Manual mode' : 'Auto-refresh active'} • ${moment().format('MMMM Do YYYY')}`,
+                            text: `Updates every ${Math.floor(this.config.updateInterval/1000)} seconds • ${this.isPaused ? 'PAUSED' : 'ACTIVE'} • ${moment().format('dddd, MMMM Do YYYY, h:mm:ss A')}`,
                             iconURL: this.client.user.displayAvatarURL() 
                         });
+            }
+
+            // Determine if we should create interactive controls (every 15 minutes)
+            let messageContent = null;
+            let components = [];
+            
+            if (shouldRecreateMessage) {
+                // Every 15 minutes, create a new set of interactive controls
+                if (this.config.showRefreshButton) {
+                    // Create a new row for buttons
+                    const row = new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('refresh_status')
+                                .setLabel('Refresh')
+                                .setStyle(ButtonStyle.Primary)
+                                .setEmoji('🔄')
+                        );
                     
-                    break;
+                    components.push(row);
+                }
             }
 
             // Try to edit the existing status message first if it exists
-            if (this.statusMessage && !shouldRecreateStatusMessage) {
+            if (this.statusMessage && !shouldRecreateMessage) {
                 try {
                     await this.statusMessage.edit({ 
                         embeds: [embed],
-                        components: components // Include the refresh button in monitoring panel
+                        components: [] // No components on main status message
                     });
                     // Successful edit, update timestamp
                     this.lastUpdate = Date.now();
                 } catch (err) {
                     console.log(`[INFO] Failed to edit status message (${err.message}), will recreate...`);
                     this.statusMessage = null; // Force recreation
+                    // Continue to recreation logic below
+                }
+            }
+            
+            // Also try to edit the controls message if it exists
+            if (this.controlsMessage) {
+                try {
+                    const controls = this.createInteractiveControls();
+                    await this.controlsMessage.edit(controls);
+                    // Log successful controls update only in debug mode to reduce log spam
+                    // console.log(`[DEBUG] Successfully updated controls message`);
+                } catch (err) {
+                    console.log(`[INFO] Failed to edit controls message (${err.message}), will recreate...`);
+                    this.controlsMessage = null; // Force recreation of controls panel
                 }
             }
             
             // Create a new status message if needed (either we don't have one or edit failed)
             if (!this.statusMessage) {
                 // Only clean up if configured to do so (and not in stable mode)
+                // To prevent potential loss of messages, we'll clean up only when absolutely necessary
                 if (this.config.deleteOldStatusMessages && !this.config.stabilityMode && !this.cleanupCompleted) {
                     console.log(`[INFO] Cleaning up status channel before creating new message...`);
-                    await this.cleanupStatusChannel(this.statusChannel, 99); 
+                    await this.cleanupStatusChannel(99); // Clean up to make room for new messages
                     this.cleanupCompleted = true; // Mark cleanup as completed to prevent repeated cleanups
                 }
                 
@@ -551,7 +520,7 @@ class StatusMonitor {
                     this.statusMessage = await this.statusChannel.send({ 
                         content: messageContent,
                         embeds: [embed],
-                        components: components // Include the refresh button in monitoring panel
+                        components: [] // No components on main status message
                     });
                     
                     // Update timestamp for next recreation cycle
@@ -566,13 +535,25 @@ class StatusMonitor {
                 }
             }
             
-            // DON'T create controls messages here (only in init)
+            // Create a new controls message if needed and enabled
+            if (!this.controlsMessage && this.config.showControls) {
+                try {
+                    const controls = this.createInteractiveControls();
+                    this.controlsMessage = await this.statusChannel.send(controls);
+                    
+                    console.log(`[INFO] Created new controls message at ${new Date().toISOString()}`);
+                    
+                    // Store the message ID for potential persistence
+                    if (this.config.persistMessage) {
+                        this.config.controlsMessageId = this.controlsMessage.id;
+                    }
+                } catch (error) {
+                    console.error(`[ERROR] Failed to create controls message: ${error.message}`);
+                }
+            }
         } catch (error) {
             // Only log errors to console, not to Discord
             console.error(`[ERROR] Error updating status: ${error.message}`);
-        } finally {
-            // CRITICAL: Release the lock to allow future updates
-            this._updatingStatus = false;
         }
     }
     
@@ -608,43 +589,14 @@ class StatusMonitor {
         await interaction.deferUpdate().catch(err => console.error(`[ERROR] Failed to defer update: ${err.message}`));
         
         // Custom authorization check for developer-only controls
-        const isDeveloper = await this.isUserDeveloper(interaction.user.id);
+        const isDeveloper = this.isUserDeveloper(interaction.user.id);
         
         // Record the interaction in general logs (only for developer commands)
         if (isDeveloper) {
             console.log(`[DEV] ${interaction.user.tag} (ID: ${interaction.user.id}) used monitoring control: ${interaction.customId}`);
         }
         
-        // Get customId and determine origin (monitoring panel vs control panel)
-        const isMonitoringPanelAction = interaction.customId === 'status_refresh';
-        const isControlPanelAction = !isMonitoringPanelAction;
-        
-        // Handle refresh from main monitoring panel
-        if (isMonitoringPanelAction) {
-            // Only allow refresh when monitoring is paused or the user is a developer
-            if (this.isPaused || isDeveloper) {
-                // Update the status
-                await this.updateStatus();
-                
-                // Send ephemeral (hidden) confirmation message only visible to the user
-                await interaction.followUp({
-                    content: `✅ Status has been refreshed.`,
-                    ephemeral: true
-                }).catch(err => {
-                    console.error(`[ERROR] Failed to send refresh confirmation: ${err.message}`);
-                });
-                
-                console.log(`[INFO] Status refreshed by ${interaction.user.tag}`);
-            } else {
-                // Regular users can't refresh when auto-monitoring is active
-                await interaction.followUp({
-                    content: `ℹ️ Status is already updating automatically every ${this.config.updateInterval/1000} seconds.`,
-                    ephemeral: true
-                }).catch(err => console.error(`[ERROR] Failed to send message: ${err.message}`));
-            }
-        }
-        // Handle control panel interactions
-        else if (interaction.customId === "refresh_status") {
+        if (interaction.customId === "refresh_status") {
             // Only allow refresh when monitoring is paused or the user is a developer
             if (this.isPaused || isDeveloper) {
                 // Update the status
@@ -750,44 +702,6 @@ class StatusMonitor {
                 console.error(`[ERROR] Failed to change display mode: ${error.message}`);
             }
         }
-        else if (interaction.customId === "restart_bot") {
-            // Only allow developers to restart the bot
-            if (!isDeveloper) {
-                await interaction.followUp({
-                    content: `⚠️ Only developers can restart the bot.`,
-                    ephemeral: true
-                }).catch(err => console.error(`[ERROR] Failed to send message: ${err.message}`));
-                
-                console.log(`[SECURITY] Unauthorized restart attempt by ${interaction.user.tag}`);
-                return;
-            }
-            
-            await interaction.followUp({
-                content: `🔄 Initiating bot restart. Please wait...`,
-                ephemeral: true
-            }).catch(err => console.error(`[ERROR] Failed to send confirmation: ${err.message}`));
-            
-            console.log(`[INFO] Bot restart requested by ${interaction.user.tag}`);
-            
-            // Execute restart command logic
-            try {
-                // Generate a random restart ID 
-                const restartId = Math.random().toString(36).substring(2, 8);
-                
-                // Log restart to general logs
-                console.log(`[RESTART] Bot restart initiated by ${interaction.user.tag} (ID: ${restartId})`);
-                
-                // Actually restart the bot
-                process.exit(0); // Process will be restarted by the wrapper/host
-            } catch (error) {
-                console.error(`[ERROR] Failed to restart bot: ${error.message}`);
-                
-                await interaction.followUp({
-                    content: `❌ Failed to restart bot: ${error.message}`,
-                    ephemeral: true
-                }).catch(err => console.error(`[ERROR] Failed to send error message: ${err.message}`));
-            }
-        }
     }
     
     /**
@@ -795,39 +709,10 @@ class StatusMonitor {
      * @param {String} userId - Discord user ID to check
      * @returns {Boolean} True if user is a developer
      */
-    async isUserDeveloper(userId) {
-        // Direct match with configured developer IDs
-        if (this.config.developerIds && this.config.developerIds.includes(userId)) {
-            return true;
-        }
-        
-        // Check for dev role if specified
-        if (this.config.devRoleId) {
-            try {
-                // Get all guilds the bot is in
-                const guilds = this.client.guilds.cache.values();
-                
-                // Check each guild
-                for (const guild of guilds) {
-                    try {
-                        // Try to fetch the member
-                        const member = await guild.members.fetch(userId).catch(() => null);
-                        if (member) {
-                            // Check if they have the developer role
-                            if (member.roles.cache.has(this.config.devRoleId)) {
-                                return true;
-                            }
-                        }
-                    } catch (error) {
-                        // Ignore errors for individual guild checks
-                    }
-                }
-            } catch (error) {
-                console.error(`[ERROR] Error checking developer role: ${error.message}`);
-            }
-        }
-        
-        return false;
+    isUserDeveloper(userId) {
+        // Check if user ID is in the list of developer IDs
+        return this.config.developerIds && 
+               this.config.developerIds.includes(userId);
     }
 
     /**
@@ -1003,64 +888,59 @@ class StatusMonitor {
         // Create basic system overview embed
         const embed = new EmbedBuilder()
             .setColor(this.isPaused ? "#FFAA00" : "#44FF44")
-            .setTitle("🎮 Developer Control Panel")
-            .setDescription("The bot is online and working perfectly! 🤖✨\nThis panel provides enhanced bot controls for developers.")
+            .setTitle("🎮 Monitoring Controls")
+            .setDescription("The bot is online and working perfectly! 🤖✨")
             .addFields([
                 {
-                    name: "📊 Monitoring Controls",
+                    name: "📊 Current Status",
                     value: this.isPaused 
-                        ? "⚠️ Auto-monitoring is paused. Use the refresh button below for manual updates."
+                        ? "⚠️ Auto-monitoring is paused. **Only developers can resume monitoring.**"
                         : "✅ Monitoring is active and automatically updating.",
                     inline: false
                 },
                 {
-                    name: "⏲️ Update Settings",
+                    name: "⏲️ Update Interval",
                     value: this.isPaused 
                         ? "Manual updates only through the refresh button below."
                         : `Status automatically updates every ${this.config.updateInterval / 1000} seconds.`,
                     inline: false
                 },
                 {
-                    name: "🛠️ System Management",
-                    value: "Access to core system functions and special controls. Bot uptime: " + this.getReadableUptime(),
+                    name: "🛠️ Developer Controls",
+                    value: "Only bot developers can access monitoring controls. Regular users will see a standard message.",
                     inline: false
                 }
             ]);
             
-        // Create monitoring controls section
-        const monitoringRow = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('refresh_status')
-                    .setLabel('Refresh Status')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🔄')
-                    // Only enable refresh button when monitoring is paused
-                    .setDisabled(!this.isPaused),
-                new ButtonBuilder()
-                    .setCustomId('view_analytics')
-                    .setLabel('View Analytics')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('📊'),
-                new ButtonBuilder()
-                    .setCustomId('toggle_monitoring')
-                    .setLabel(this.isPaused ? 'Resume Monitoring' : 'Pause Monitoring')
-                    .setStyle(this.isPaused ? ButtonStyle.Success : ButtonStyle.Secondary)
-                    .setEmoji(this.isPaused ? '▶️' : '⏸️')
-            );
+        // Create refresh button - the only button regular users can use
+        const refreshButton = new ButtonBuilder()
+            .setCustomId('refresh_status')
+            .setLabel('Refresh Now')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🔄')
+            // Only enable refresh button when monitoring is paused
+            .setDisabled(!this.isPaused);
+        
+        // Create view analytics button - available to all users
+        const analyticsButton = new ButtonBuilder()
+            .setCustomId('view_analytics')
+            .setLabel('View Analytics')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📊');
             
-        // Create system management section
-        const systemRow = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('restart_bot')
-                    .setLabel('Restart Bot')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('🔄')
-            );
+        // Create toggle button - this will be shown to everyone but only work for developers
+        const toggleButton = new ButtonBuilder()
+            .setCustomId('toggle_monitoring')
+            .setLabel(this.isPaused ? 'Resume Monitoring' : 'Pause Monitoring')
+            .setStyle(this.isPaused ? ButtonStyle.Success : ButtonStyle.Secondary)
+            .setEmoji(this.isPaused ? '▶️' : '⏸️');
             
-        // Create display mode selector
-        const displayModeRow = new ActionRowBuilder()
+        // Add all buttons to the row
+        const row = new ActionRowBuilder()
+            .addComponents(refreshButton, analyticsButton, toggleButton);
+            
+        // Create options for display mode
+        const modeSelector = new ActionRowBuilder()
             .addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId('status_display_mode')
@@ -1086,7 +966,7 @@ class StatusMonitor {
             
         return { 
             embeds: [embed],
-            components: [monitoringRow, displayModeRow, systemRow]
+            components: [row, modeSelector]
         };
     }
     

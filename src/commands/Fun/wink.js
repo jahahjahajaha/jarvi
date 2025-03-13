@@ -1,11 +1,77 @@
 const { EmbedBuilder } = require('discord.js');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
+/**
+ * Get a wink GIF URL from multiple APIs
+ * Uses multiple sources for better reliability
+ * @returns {Promise<string|null>} - GIF URL or null if all APIs fail
+ */
+async function getWinkGif() {
+    const apis = [
+        // Primary API - Waifu.pics
+        {
+            url: 'https://api.waifu.pics/sfw/wink',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.url;
+            },
+            name: 'Waifu.pics'
+        },
+        // Another API - Some-Random-API
+        {
+            url: 'https://some-random-api.ml/animu/wink',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.link;
+            },
+            name: 'Some-Random-API'
+        },
+        // Note: Nekos.life doesn't have a wink endpoint so we use smug as a backup
+        {
+            url: 'https://nekos.life/api/v2/img/smug',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.url;
+            },
+            name: 'Nekos.life (smug fallback)'
+        },
+        // Another backup API - anime-api
+        {
+            url: 'https://anime-api.hisoka17.repl.co/img/wink',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.url;
+            },
+            name: 'anime-api'
+        }
+    ];
+    
+    // Try each API until we get a valid URL
+    for (const api of apis) {
+        try {
+            const response = await fetch(api.url);
+            if (response.ok) {
+                const url = await api.handler(response);
+                if (url) {
+                    console.log(`Successfully fetched wink GIF from ${api.name}`);
+                    return url;
+                }
+            }
+        } catch (error) {
+            console.error(`${api.name} API error:`, error.message);
+        }
+    }
+    
+    // If all APIs failed, return null
+    return null;
+}
+
 module.exports = {
     name: "wink",
     category: "Fun",
     description: "Wink at someone 😉",
     args: true,
+    aliases: ["blink", "eyewink", "flirt", "winkwink"],
     usage: "<@user>",
     permission: [],
     owner: false,
@@ -32,40 +98,10 @@ module.exports = {
         }
 
         try {
-            let gifUrl = null;
+            // Get a GIF from one of our API sources
+            const gifUrl = await getWinkGif();
             
-            // Try Waifu.pics API first
-            try {
-                const apiEndpoint = 'https://api.waifu.pics/sfw/wink';
-                const response = await fetch(apiEndpoint);
-                const data = await response.json();
-                
-                if (data.url) {
-                    gifUrl = data.url;
-                    console.log("Successfully fetched wink GIF from Waifu.pics API");
-                }
-            } catch (primaryError) {
-                console.error("Waifu.pics API error:", primaryError.message);
-            }
-            
-            // If first API failed, try another API
-            if (!gifUrl) {
-                try {
-                    // Note: Nekos.life doesn't have a wink endpoint, so using a public API that provides anime wink GIFs
-                    const backupEndpoint = 'https://nekos.life/api/v2/img/smug'; // Using smug as fallback since wink isn't available
-                    const backupResponse = await fetch(backupEndpoint);
-                    const backupData = await backupResponse.json();
-                    
-                    if (backupData.url) {
-                        gifUrl = backupData.url;
-                        console.log("Successfully fetched alternative GIF from backup API");
-                    }
-                } catch (backupError) {
-                    console.error("Backup API error:", backupError.message);
-                }
-            }
-            
-            // If both APIs failed, throw error
+            // If no GIF URL found, throw error
             if (!gifUrl) {
                 throw new Error('Failed to fetch GIF from all sources');
             }

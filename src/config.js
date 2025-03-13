@@ -89,11 +89,21 @@ const config = {
     editMessages: true, // Edit existing message instead of creating a new one
     statusChannelId: getEnvVar("BOT_STATUS_CHANNEL", "1335329530734186535"), // Status monitoring channel
     statusMessageId: null, // Will be set dynamically when first created
+    recreateInterval: 86400000, // 24 hours (in milliseconds) before recreating the message
     alertOwnerOnError: true,
     useWebhooks: false, // Temporarily disabled webhooks due to issues
-    deleteOldStatusMessages: true, // Now set to true to delete old messages every 10 minutes
+    deleteOldStatusMessages: false, // Should be false to prevent constant deleting/recreating
+    deleteOnStartup: true, // Delete messages only on startup
     maxMessagesToDelete: 10, // Increased to handle more messages
-    showRefreshButton: false, // No need for refresh button with fast updates
+    showRefreshButton: true, // Show refresh button for manual updates
+    showControls: true, // Show interactive controls for managing monitoring 
+    allowViewModeChanges: true, // Allow users to change display modes
+    trackCommandExecution: true, // Track command execution for analytics
+    enableTrendAnalysis: true, // Enable trend analysis for key metrics
+    devRoleIds: ["1335329530734186535", "1335329530734186530"], // Developer role IDs that can control monitoring
+    ownerIds: [getEnvVar("BOT_OWNER_ID", "966132097078321152")], // Bot owner IDs that can control everything
+    persistMessage: true, // Try to persist message between restarts
+    stabilityMode: true, // Enhanced stability mode - avoids unnecessary recreation
     publicChannels: ["serverjoinleave", "boost", "botstatus"], // Channels that should use normal messages not webhooks
     healthChecks: {
       memoryThreshold: 80, // Alert if memory usage is above 80%

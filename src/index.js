@@ -91,60 +91,84 @@ client.once('ready', () => {
 
 // Handle interactions
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
-
-    let options = interaction.values;
-    const funny = options[0];
-
-    const createEmbed = (title, description) => {
-        return new EmbedBuilder()
-            .setColor(client.embedColor)
-            .setThumbnail(client.user.displayAvatarURL())
-            .setDescription(description)
-            .setAuthor({ 
-                name: title, 
-                iconURL: client.user.displayAvatarURL() 
-            });
-    };
-
-    let embed;
-    switch (funny) {
-        case 'first':
-            embed = createEmbed("Information Commands", "➡ `:` Help\n➡ `:` Invite\n➡ `:` Ping\n➡ `:` Node\n➡ `:` Stats\n➡ `:` Uptime");
-            break;
-        case 'second':
-            embed = createEmbed("Music Commands", "➡ `:` AutoPlay\n➡ `:` Clearqueue\n➡ `:` Join\n➡ `:` Leave\n➡ `:` Loop\n➡ `:` Nowplaying\n➡ `:` Pause\n➡ `:` Play\n➡ `:` Volume\n➡ `:` Destroy\n➡ `:` Queue\n➡ `:` Resume\n➡ `:` Shuffle\n➡ `:` Skip\n➡ `:` Stop");
-            break;
-        case 'third':
-            embed = new EmbedBuilder()
-                .setColor(client.embedColor)
-                .setThumbnail(client.user.displayAvatarURL())
-                .addFields([
-                    { name: "Information Commands [6]", value: "`help, invite, ping, node, stats, uptime`" },
-                    { name: "Music Commands [15]", value: "`autoplay, clearqueue, join, leave, loop, nowplaying, pause, play, volume, destroy, queue, resume, shuffle, skip, stop`" },
-                    { name: "Filter Commands [1]", value: "`filters`" },
-                    { name: "Settings [3]", value: "`24/7, setprefix, destroy`" }
-                ])
-                .setAuthor({ 
-                    name: "All Commands", 
-                    iconURL: client.user.displayAvatarURL() 
-                });
-            break;
-        case 'fourth':
-            embed = createEmbed("Filter Commands", "➡ `:` Filters");
-            break;
-        case 'fifth':
-            embed = createEmbed("Config Commands", "➡ `:` 24/7\n➡ `:` Setprefix\n➡ `:` Destroy");
-            break;
-        case 'sixth':
-            embed = createEmbed("Utility Commands", "➡ `:` Avatar\n➡ `:` Serverinfo\n➡ `:` Servericon\n➡ `:` Membercount\n➡ `:` Firstmsg\n➡ `:` Listroles\n➡ `:` Listemojis");
-            break;
-        default:
-            embed = createEmbed("Unknown Command", "❌ Invalid selection. Please try again.");
-            break;
+    // Handle status monitor interactions (buttons and select menus)
+    if (interaction.isButton() || interaction.isStringSelectMenu()) {
+        // Check if this is a status monitor interaction
+        const statusInteractionIds = [
+            'status_refresh', 'refresh_status', 'toggle_monitoring', 
+            'view_analytics', 'status_display_mode', 'restart_bot'
+        ];
+        
+        if (statusInteractionIds.includes(interaction.customId)) {
+            try {
+                // Forward to status monitor handler
+                const statusMonitor = client.statusMonitor;
+                if (statusMonitor) {
+                    await statusMonitor.handleStatusInteraction(interaction);
+                    return;
+                }
+            } catch (error) {
+                console.error(`[ERROR] Failed to handle status monitor interaction:`, error);
+            }
+        }
     }
 
-    await interaction.reply({ embeds: [embed], ephemeral: true }).catch(console.error);
+    // Handle help menu interactions
+    if (interaction.isStringSelectMenu() && 
+        !['status_refresh', 'refresh_status', 'toggle_monitoring', 'view_analytics', 'status_display_mode', 'restart_bot'].includes(interaction.customId)) {
+        let options = interaction.values;
+        const funny = options[0];
+
+        const createEmbed = (title, description) => {
+            return new EmbedBuilder()
+                .setColor(client.embedColor)
+                .setThumbnail(client.user.displayAvatarURL())
+                .setDescription(description)
+                .setAuthor({ 
+                    name: title, 
+                    iconURL: client.user.displayAvatarURL() 
+                });
+        };
+
+        let embed;
+        switch (funny) {
+            case 'first':
+                embed = createEmbed("Information Commands", "➡ `:` Help\n➡ `:` Invite\n➡ `:` Ping\n➡ `:` Node\n➡ `:` Stats\n➡ `:` Uptime");
+                break;
+            case 'second':
+                embed = createEmbed("Music Commands", "➡ `:` AutoPlay\n➡ `:` Clearqueue\n➡ `:` Join\n➡ `:` Leave\n➡ `:` Loop\n➡ `:` Nowplaying\n➡ `:` Pause\n➡ `:` Play\n➡ `:` Volume\n➡ `:` Destroy\n➡ `:` Queue\n➡ `:` Resume\n➡ `:` Shuffle\n➡ `:` Skip\n➡ `:` Stop");
+                break;
+            case 'third':
+                embed = new EmbedBuilder()
+                    .setColor(client.embedColor)
+                    .setThumbnail(client.user.displayAvatarURL())
+                    .addFields([
+                        { name: "Information Commands [6]", value: "`help, invite, ping, node, stats, uptime`" },
+                        { name: "Music Commands [15]", value: "`autoplay, clearqueue, join, leave, loop, nowplaying, pause, play, volume, destroy, queue, resume, shuffle, skip, stop`" },
+                        { name: "Filter Commands [1]", value: "`filters`" },
+                        { name: "Settings [3]", value: "`24/7, setprefix, destroy`" }
+                    ])
+                    .setAuthor({ 
+                        name: "All Commands", 
+                        iconURL: client.user.displayAvatarURL() 
+                    });
+                break;
+            case 'fourth':
+                embed = createEmbed("Filter Commands", "➡ `:` Filters");
+                break;
+            case 'fifth':
+                embed = createEmbed("Config Commands", "➡ `:` 24/7\n➡ `:` Setprefix\n➡ `:` Destroy");
+                break;
+            case 'sixth':
+                embed = createEmbed("Utility Commands", "➡ `:` Avatar\n➡ `:` Serverinfo\n➡ `:` Servericon\n➡ `:` Membercount\n➡ `:` Firstmsg\n➡ `:` Listroles\n➡ `:` Listemojis");
+                break;
+            default:
+                embed = createEmbed("Unknown Command", "❌ Invalid selection. Please try again.");
+                break;
+        }
+
+        await interaction.reply({ embeds: [embed], ephemeral: true }).catch(console.error);
+    }
 });
 
 // Start the bot with detailed diagnostics

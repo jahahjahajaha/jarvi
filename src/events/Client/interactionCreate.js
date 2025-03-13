@@ -5,14 +5,79 @@ const i18n = require("../../utils/i18n");
 module.exports = {
     name: "interactionCreate",
     run: async (client, interaction) => {
-        // Handle status monitor button interactions
-        if (interaction.isButton() && interaction.customId === "refresh_status") {
+        // Handle status monitor button interactions for all status-related buttons
+        if (interaction.isButton()) {
             if (client.statusMonitor) {
                 try {
-                    await client.statusMonitor.handleStatusInteraction(interaction);
+                    // Handle refresh status button
+                    if (interaction.customId === "refresh_status") {
+                        await client.statusMonitor.handleStatusInteraction(interaction);
+                        return;
+                    }
+                    
+                    // Handle view analytics button
+                    if (interaction.customId === "view_analytics") {
+                        await interaction.deferReply({ ephemeral: true });
+                        const analyticsEmbed = client.statusMonitor.createAnalyticsEmbed();
+                        await interaction.followUp({ 
+                            embeds: [analyticsEmbed],
+                            ephemeral: true
+                        });
+                        client.logger.log(`Analytics view requested by ${interaction.user.tag}`, "info");
+                        return;
+                    }
+                    
+                    // Handle toggle monitoring button
+                    if (interaction.customId === "toggle_monitoring") {
+                        await interaction.deferUpdate();
+                        
+                        // Toggle monitoring status
+                        if (client.statusMonitor.monitoringInterval) {
+                            client.statusMonitor.stopMonitoring();
+                            await interaction.followUp({
+                                content: "✅ Status monitoring paused. Use 'Refresh Now' to update manually.",
+                                ephemeral: true
+                            });
+                            client.logger.log(`Status monitoring paused by ${interaction.user.tag}`, "info");
+                        } else {
+                            client.statusMonitor.startMonitoring();
+                            await interaction.followUp({
+                                content: "✅ Status monitoring resumed with automatic updates.",
+                                ephemeral: true
+                            });
+                            client.logger.log(`Status monitoring resumed by ${interaction.user.tag}`, "info");
+                        }
+                        return;
+                    }
+                } catch (error) {
+                    client.logger.log(`Status button interaction error: ${error.message}`, "error");
+                }
+            }
+        }
+        
+        // Handle status display mode selection
+        if (interaction.isStringSelectMenu() && interaction.customId === "status_display_mode") {
+            if (client.statusMonitor) {
+                try {
+                    await interaction.deferUpdate();
+                    
+                    // Get the selected display mode
+                    const selectedMode = interaction.values[0];
+                    client.statusMonitor.displayMode = selectedMode;
+                    
+                    // Update the status immediately to show changes
+                    await client.statusMonitor.updateStatus();
+                    
+                    // Confirm the change to the user
+                    await interaction.followUp({
+                        content: `✅ Display mode changed to: ${selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)}`,
+                        ephemeral: true
+                    });
+                    
+                    client.logger.log(`Status display mode changed to ${selectedMode} by ${interaction.user.tag}`, "info");
                     return;
                 } catch (error) {
-                    client.logger.log(`Status refresh button error: ${error.message}`, "error");
+                    client.logger.log(`Status display mode selection error: ${error.message}`, "error");
                 }
             }
         }

@@ -1,11 +1,77 @@
 const { EmbedBuilder } = require('discord.js');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
+/**
+ * Get a GIF URL from various APIs
+ * Uses multiple API sources for reliability 
+ * @returns {Promise<string|null>} - GIF URL or null if all APIs fail
+ */
+async function getHugGif() {
+    const apis = [
+        // Primary API - Waifu.pics
+        {
+            url: 'https://api.waifu.pics/sfw/hug',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.url;
+            },
+            name: 'Waifu.pics'
+        },
+        // Backup API - Nekos.life
+        {
+            url: 'https://nekos.life/api/v2/img/hug',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.url;
+            },
+            name: 'Nekos.life'
+        },
+        // Another backup API - anime-api
+        {
+            url: 'https://anime-api.hisoka17.repl.co/img/hug',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.url;
+            },
+            name: 'anime-api'
+        },
+        // Additional backup - Some-Random-API
+        {
+            url: 'https://some-random-api.ml/animu/hug',
+            handler: async (response) => {
+                const data = await response.json();
+                return data.link;
+            },
+            name: 'Some-Random-API'
+        }
+    ];
+    
+    // Try each API until we get a valid URL
+    for (const api of apis) {
+        try {
+            const response = await fetch(api.url);
+            if (response.ok) {
+                const url = await api.handler(response);
+                if (url) {
+                    console.log(`Successfully fetched hug GIF from ${api.name}`);
+                    return url;
+                }
+            }
+        } catch (error) {
+            console.error(`${api.name} API error:`, error.message);
+        }
+    }
+    
+    // If all APIs failed, return null
+    return null;
+}
+
 module.exports = {
     name: "hug",
     category: "Fun",
     description: "Give someone a warm hug 🤗",
     args: true,
+    aliases: ["embrace", "huggle", "huggy"],
     usage: "<@user>",
     permission: [],
     owner: false,
@@ -32,41 +98,10 @@ module.exports = {
         }
 
         try {
-            const isNsfw = message.channel.nsfw;
-            let gifUrl = null;
+            // Get a GIF from one of our API sources
+            const gifUrl = await getHugGif();
             
-            // Try primary API (Waifu.pics)
-            try {
-                // Using SFW endpoint regardless of channel status as Waifu.pics doesn't have NSFW hug
-                const apiEndpoint = 'https://api.waifu.pics/sfw/hug';
-                const response = await fetch(apiEndpoint);
-                const data = await response.json();
-                
-                if (data.url) {
-                    gifUrl = data.url;
-                    console.log("Successfully fetched GIF from primary API (Waifu.pics)");
-                }
-            } catch (primaryError) {
-                console.error("Primary API (Waifu.pics) error:", primaryError.message);
-            }
-            
-            // If primary API failed, try backup API (Nekos.life)
-            if (!gifUrl) {
-                try {
-                    const backupEndpoint = 'https://nekos.life/api/v2/img/hug';
-                    const backupResponse = await fetch(backupEndpoint);
-                    const backupData = await backupResponse.json();
-                    
-                    if (backupData.url) {
-                        gifUrl = backupData.url;
-                        console.log("Successfully fetched GIF from backup API (Nekos.life)");
-                    }
-                } catch (backupError) {
-                    console.error("Backup API (Nekos.life) error:", backupError.message);
-                }
-            }
-            
-            // If both APIs failed, throw error
+            // If no GIF URL found, throw error
             if (!gifUrl) {
                 throw new Error('Failed to fetch GIF from all sources');
             }

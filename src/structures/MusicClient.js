@@ -269,6 +269,40 @@ class MusicBot extends Client {
             .then(() => {
                 console.log("[CONNECTION] Successfully connected to Discord API!");
                 console.log(`[CONNECTION] Connected as: ${this.user.tag} (${this.user.id})`);
+                
+                // Always initialize status monitor after successful login
+                try {
+                    // IMPORTANT: Only create status monitor once at startup
+                    // We need this double-check to prevent duplicate instances
+                    if (!global._statusMonitorInitialized) {
+                        console.log("[INFO] First-time status monitor initialization");
+                        
+                        // Set the global flag first
+                        global._statusMonitorInitialized = true;
+                        
+                        // Create and initialize just once
+                        this.statusMonitor = new StatusMonitor(this);
+                        
+                        // Initialize the status monitor (happens asynchronously)
+                        this.statusMonitor.init().catch(error => {
+                            console.error(`[ERROR] Failed to initialize status monitor: ${error.message}`);
+                            // Reset flag on failure
+                            global._statusMonitorInitialized = false;
+                        });
+                    } else {
+                        console.log("[INFO] Status monitor already globally initialized, skipping");
+                    }
+                    
+                    // Initialize webhook logging if enabled
+                    if (this.logger && typeof this.logger.initWebhooks === 'function') {
+                        this.logger.initWebhooks().catch(error => {
+                            console.error(`[ERROR] Failed to initialize logger webhooks: ${error.message}`);
+                        });
+                    }
+                } catch (error) {
+                    console.error(`[ERROR] Status monitor initialization error: ${error.message}`);
+                }
+                
                 return true;
             })
             .catch(error => {

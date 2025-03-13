@@ -8,9 +8,9 @@ const {
 
 module.exports = {
   name: "annpanel",
-  aliases: ["anp"],
-  category: "Owner",
-  description: "Interactive panel for sending messages or announcements.",
+  aliases: ["anp", "announce", "announcement", "announcepanel"],
+  category: "Dev",
+  description: "Enhanced interactive panel for sending messages or announcements to servers.",
   execute: async (message, args, client, prefix) => {
     // Allowed user IDs
     const allowedIDs = ["1212719184870383621", "987654321012345678"]; // Replace with your IDs
