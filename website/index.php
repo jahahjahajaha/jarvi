@@ -1,22 +1,22 @@
 <?php
-$pageTitle = "Jarvi - Ultimate Discord Music Bot";
+$pageTitle = "Jarvi - The Ultimate Discord Music Bot";
 include_once 'includes/header.php';
 ?>
 
 <!-- Hero Section -->
 <section class="hero">
-    <div class="hero-container">
+    <div class="container hero-container">
         <div class="hero-content">
             <h1>Meet <span class="highlight">Jarvi</span></h1>
             <h2>The Ultimate Discord Music Bot</h2>
             <p>Elevate your Discord server with high-quality music, intuitive commands, and seamless playback from YouTube, Spotify, and more!</p>
             <div class="cta-buttons">
-                <a href="https://discord.com/oauth2/authorize?client_id=YOUR_BOT_CLIENT_ID&scope=bot&permissions=8" class="btn btn-primary">Add to Discord</a>
+                <a href="https://discord.com/oauth2/authorize?client_id=1340194029517799434" class="btn btn-primary">Add to Discord</a>
                 <a href="https://discord.gg/tBNezcRHMe" class="btn btn-secondary">Join Support Server</a>
             </div>
         </div>
         <div class="hero-image">
-            <img src="images/hero-image.png" alt="Jarvi Bot in action" class="hero-img">
+            <img src="images/jarvi-logo.png" alt="Jarvi Bot Logo" class="hero-img">
         </div>
     </div>
 </section>
@@ -181,12 +181,43 @@ include_once 'includes/header.php';
     </div>
 </section>
 
+<!-- Developer Section -->
+<section class="developer" id="developer">
+    <div class="container">
+        <div class="section-header">
+            <h2>Meet the Developer</h2>
+            <p>The creative mind behind Jarvi</p>
+        </div>
+        
+        <div class="developer-profile">
+            <div class="developer-image">
+                <img src="images/developer.png" alt="KnarliX - Jarvi Developer" class="dev-img">
+            </div>
+            <div class="developer-content">
+                <h3>KnarliX</h3>
+                <p class="developer-id">Discord ID: 1212719184870383621</p>
+                <p class="developer-description">
+                    KnarliX is a passionate developer focused on creating reliable and feature-rich Discord bots.
+                    With extensive experience in bot development, music streaming, and Discord API integration,
+                    KnarliX has created Jarvi to provide a seamless music experience for Discord communities.
+                </p>
+                <div class="developer-social">
+                    <a href="https://discord.gg/tBNezcRHMe" class="dev-social-link" target="_blank"><i class="fab fa-discord"></i> Discord</a>
+                    <a href="#" class="dev-social-link" target="_blank"><i class="fab fa-github"></i> GitHub</a>
+                    <a href="#" class="dev-social-link" target="_blank"><i class="fab fa-youtube"></i> YouTube</a>
+                    <a href="#" class="dev-social-link" target="_blank"><i class="fab fa-instagram"></i> Instagram</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Call to Action -->
 <section class="cta">
     <div class="container">
         <h2>Ready to elevate your Discord server?</h2>
         <p>Add Jarvi to your server and experience the best music bot available!</p>
-        <a href="https://discord.com/oauth2/authorize?client_id=YOUR_BOT_CLIENT_ID&scope=bot&permissions=8" class="btn btn-cta">Add to Discord</a>
+        <a href="https://discord.com/oauth2/authorize?client_id=1340194029517799434" class="btn btn-cta">Add to Discord</a>
     </div>
 </section>
 

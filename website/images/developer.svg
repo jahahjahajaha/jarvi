@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="250" cy="250" r="240" fill="#242731" stroke="#E87147" stroke-width="10"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="130" cy="120" r="50" fill="#5865F2" opacity="0.3"/>
+  <circle cx="380" cy="390" r="70" fill="#E87147" opacity="0.2"/>
+  
+  <!-- Abstract developer representation -->
+  <g id="developer">
+    <!-- Head -->
+    <circle cx="250" cy="180" r="80" fill="#5865F2" opacity="0.8"/>
+    
+    <!-- Body -->
+    <path d="M170 270 Q250 350 330 270" stroke="#E87147" stroke-width="12" fill="none"/>
+    
+    <!-- Code elements -->
+    <text x="180" y="330" font-family="monospace" font-size="16" fill="#E87147">&lt;code&gt;</text>
+    <text x="280" y="330" font-family="monospace" font-size="16" fill="#E87147">&lt;/code&gt;</text>
+    
+    <!-- Discord element -->
+    <path d="M200 380 Q250 420 300 380" stroke="#5865F2" stroke-width="8" fill="none"/>
+    <circle cx="200" cy="380" r="15" fill="#5865F2"/>
+    <circle cx="300" cy="380" r="15" fill="#5865F2"/>
+    
+    <!-- Developer name -->
+    <text x="250" y="420" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle" font-weight="bold">KnarliX</text>
+    
+    <!-- Music-related elements -->
+    <path d="M140 180 L140 220 Q140 240 120 240 Q100 240 100 220 L100 200" stroke="#E87147" stroke-width="4" fill="none"/>
+    <circle cx="100" cy="200" r="8" fill="#E87147"/>
+    
+    <path d="M360 180 L360 220 Q360 240 380 240 Q400 240 400 220 L400 200" stroke="#E87147" stroke-width="4" fill="none"/>
+    <circle cx="400" cy="200" r="8" fill="#E87147"/>
+  </g>
+</svg>

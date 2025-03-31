@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="500" height="400" viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5865F2;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#E87147;stop-opacity:0.9" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Discord-inspired background with waveform -->
+  <path d="M0,250 Q125,200 250,250 T500,250 V400 H0 Z" fill="url(#grad1)" opacity="0.6" />
+  
+  <!-- Bot Container -->
+  <g transform="translate(250, 180)">
+    <!-- Bot Body - Discord-style -->
+    <rect x="-90" y="-80" width="180" height="160" rx="20" ry="20" fill="#1E2124" stroke="#E87147" stroke-width="3" />
+    
+    <!-- Bot Face Display -->
+    <rect x="-70" y="-60" width="140" height="80" rx="10" ry="10" fill="#2C2F33" />
+    
+    <!-- Bot Expression - Happy Face -->
+    <circle cx="-30" cy="-30" r="10" fill="#E87147" /> <!-- Left Eye -->
+    <circle cx="30" cy="-30" r="10" fill="#E87147" /> <!-- Right Eye -->
+    <path d="M-40,10 Q0,40 40,10" stroke="#E87147" stroke-width="5" fill="none" /> <!-- Smile -->
+    
+    <!-- Music Visualization Bars -->
+    <rect x="-60" y="50" width="10" height="20" fill="#E87147" />
+    <rect x="-45" y="50" width="10" height="30" fill="#E87147" />
+    <rect x="-30" y="50" width="10" height="15" fill="#E87147" />
+    <rect x="-15" y="50" width="10" height="40" fill="#E87147" />
+    <rect x="0" y="50" width="10" height="25" fill="#E87147" />
+    <rect x="15" y="50" width="10" height="35" fill="#E87147" />
+    <rect x="30" y="50" width="10" height="20" fill="#E87147" />
+    <rect x="45" y="50" width="10" height="10" fill="#E87147" />
+    
+    <!-- Bot Controls -->
+    <circle cx="-60" cy="-90" r="8" fill="#E87147" />
+    <circle cx="-40" cy="-90" r="8" fill="#5865F2" />
+    <circle cx="-20" cy="-90" r="8" fill="#57F287" />
+    
+    <!-- Headphones -->
+    <path d="M-100,-20 H-90 V20 H-110 V-10 A90,90 0 0,1 -10,-90" stroke="#E87147" stroke-width="5" fill="none" />
+    <path d="M100,-20 H90 V20 H110 V-10 A90,90 0 0,0 10,-90" stroke="#E87147" stroke-width="5" fill="none" />
+    
+    <!-- Music Notes around bot -->
+    <g transform="translate(-120, -60) scale(0.5)">
+      <path d="M20,0 L20,30 L10,40 L0,30 L0,20 L10,30 L10,0" fill="#E87147" />
+      <circle cx="5" cy="40" r="5" fill="#E87147" />
+    </g>
+    
+    <g transform="translate(110, -40) scale(0.5)">
+      <path d="M20,0 L20,30 L10,40 L0,30 L0,20 L10,30 L10,0" fill="#E87147" />
+      <circle cx="5" cy="40" r="5" fill="#E87147" />
+    </g>
+    
+    <g transform="translate(130, 20) scale(0.4) rotate(20)">
+      <path d="M20,0 L20,30 L10,40 L0,30 L0,20 L10,30 L10,0" fill="#E87147" />
+      <circle cx="5" cy="40" r="5" fill="#E87147" />
+    </g>
+  </g>
+  
+  <!-- Text "Jarvi" at the bottom -->
+  <text x="250" y="350" font-family="Arial, sans-serif" font-size="40" text-anchor="middle" font-weight="bold" fill="#FFFFFF">JARVI MUSIC BOT</text>
+</svg>
