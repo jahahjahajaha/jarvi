@@ -10,8 +10,8 @@ module.exports = {
     name: "guildDelete",
     async run(client, guild) {
         try {
-            // Get the server leave notification channel from config
-            const logChannel = await client.channels.fetch(config.logs.serverjoinleave).catch(() => null);
+            // Get the server leave notification channel from config (BOT left a server)
+            const logChannel = await client.channels.fetch('1335329531262668804').catch(() => null);
             if (!logChannel) {
                 return client.logger.log("Server leave notification channel not found!", "error");
             }

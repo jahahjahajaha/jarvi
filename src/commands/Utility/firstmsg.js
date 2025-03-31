@@ -8,7 +8,7 @@ module.exports = {
   args: false,
   usage: "[#channel or ID]",
   permission: [],
-  voteonly: false,
+  botonly: false,
   owner: false,
 
   execute: async (message, args, client, prefix) => {

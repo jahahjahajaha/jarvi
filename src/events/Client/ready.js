@@ -3,7 +3,6 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 const { EmbedBuilder, ActivityType } = require('discord.js');
 const os = require('os');
-const StatusMonitor = require('../../utils/statusMonitor');
 
 module.exports = {
     name: "ready",
@@ -63,13 +62,8 @@ module.exports = {
             }
         }
         
-        // Initialize bot status monitoring
-        try {
-            client.statusMonitor = new StatusMonitor(client);
-            await client.statusMonitor.init();
-        } catch (error) {
-            client.logger.log(`Failed to initialize status monitor: ${error.stack}`, "error");
-        }
+        // No longer initialize status monitoring here
+        // Status monitoring is now handled in MusicClient.js to avoid duplicates
         
         // Register slash commands with Discord API
         try {

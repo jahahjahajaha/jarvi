@@ -7,7 +7,7 @@ module.exports = {
     args: false,
     usage: "",
     permission: [],
-    voteonly: false,
+    botonly: false,
     owner: false,
 
     execute: async (message, args, client, prefix) => {

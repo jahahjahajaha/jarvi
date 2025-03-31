@@ -8,17 +8,17 @@ module.exports = async (client, player) => {
         const channel = client.channels.cache.get(player.textChannel);
         const emojiwarn = client.emoji.warn;
 
-        const tmkc = new ActionRowBuilder() 
+        const actionRow = new ActionRowBuilder() 
             .addComponents(
                 new ButtonBuilder()
-                    .setLabel("Vote Me")   
+                    .setLabel("Vote for Bot")   
                     .setStyle(ButtonStyle.Link)  
                     .setURL(`https://top.gg/bot/${client.user.id}/vote`)
             );
   
-        let thing = new EmbedBuilder()
+        let embed = new EmbedBuilder()
                 .setColor(client.embedColor)
                 .setDescription(`➕ | Queue has been ended. Add more songs to keep the party going`)
                 .setAuthor({name: `${client.user.username}`, iconURL: client.user.displayAvatarURL()});
-        channel.send({embeds: [thing], components: [tmkc]});
+        channel.send({embeds: [embed], components: [actionRow]});
 }

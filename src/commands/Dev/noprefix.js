@@ -1,4 +1,5 @@
 const { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
+const { checkDevRole } = require("../../utils/roleCheck");
 
 module.exports = {
   name: "noprefix",
@@ -8,17 +9,15 @@ module.exports = {
   args: false,
   usage: "<add/remove/list> [user]",
   permission: [],
-  owner: true,
+  devOnly: true,
   execute: async (message, args, client, prefix) => {
-    // Developer IDs with permission to manage no-prefix users
-    const authorizedDevs = ["1212719184870383621", "1045714939676999752"];
-    
-    if (!authorizedDevs.includes(message.author.id)) {
+    // Check for dev role
+    if (!checkDevRole(message.member)) {
       return message.reply({
         embeds: [
           new EmbedBuilder()
-            .setColor("Red")
-            .setDescription("❌ | You don't have permission to use this command.\n*Only authorized developers can manage no-prefix access.*")
+            .setColor('#FF0000')
+            .setDescription('❌ | Only developers can use this command!')
         ]
       });
     }

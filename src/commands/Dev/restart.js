@@ -1,6 +1,7 @@
 const { EmbedBuilder, PermissionsBitField } = require("discord.js");
 const Logger = require("../../utils/logger");
 const os = require("os");
+const { checkDevRole } = require("../../utils/roleCheck");
 
 module.exports = {
   name: "restart",
@@ -10,19 +11,18 @@ module.exports = {
   args: false,
   usage: "[reason]",
   permission: [],
-  owner: true,
+  devOnly: true,
   
   async execute(message, args, client) {
-    const allowedUsers = ["1212719184870383621", "1045714939676999752"];
-
-    if (!allowedUsers.includes(message.author.id)) {  
+    // Check for dev role
+    if (!checkDevRole(message.member)) {
       return message.reply({
         embeds: [
           new EmbedBuilder()
-            .setColor("Red")
-            .setDescription("❌ | You don't have permission to use this command.\n*Only my developers (<@1212719184870383621> and other authorized devs) can use this command.*")
+            .setColor('#FF0000')
+            .setDescription('❌ | Only developers can use this command!')
         ]
-      });  
+      });
     }
     
     const reason = args.join(" ") || "No reason provided";

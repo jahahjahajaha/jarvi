@@ -37,6 +37,8 @@ console.log("[CONFIG] TOKEN available:", !!tokenVar);
 console.log("[CONFIG] Using token from:", discordToken ? "DISCORD_TOKEN" : (tokenVar ? "TOKEN" : "None found"));
 
 const config = {
+  version: "v0.10.0", // Central version number for the bot
+  
   api: {
     token: tokenVar || discordToken || "", // Prioritize TOKEN, fall back to DISCORD_TOKEN
     topggapi: getEnvVar("TOPGG_API", ""),

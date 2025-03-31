@@ -22,7 +22,7 @@ module.exports = {
 
         // Check which prefix was used
         if (message.content.match(mentionRegex)) {
-            const lawde = new ActionRowBuilder()
+            const actionRow = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
                         .setLabel("Invite")
@@ -44,7 +44,7 @@ module.exports = {
                 .setFooter({ text: client.embed.footertext, iconURL: client.embed.footericon })
                 .setDescription(`**My prefix here is \`${prefix}\`\nServer Id: \`${message.guild.id}\`\n\nType ${prefix}help or mention me with a command to see all commands**`);
 
-            return message.channel.send({ embeds: [embed], components: [lawde] });
+            return message.channel.send({ embeds: [embed], components: [actionRow] });
         }
 
         if (message.content.startsWith(prefix)) {
@@ -63,8 +63,8 @@ module.exports = {
 
         if (!command) return;
 
-        // Skip vote-only commands
-        if (command.voteonly) {
+        // Skip bot-only commands
+        if (command.botonly) {
             return message.channel.send({
                 embeds: [
                     new EmbedBuilder()

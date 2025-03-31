@@ -7,7 +7,7 @@ module.exports = {
   category: "Config",
   description: i18n.__("cmd.prefix.des"),
   args: false,
-  voteonly: false,
+  botonly: false,
   usage: "<new_prefix>",
   aliases: i18n.__("cmd.prefix.aliases"),
   permission: ["MANAGE_GUILD"],

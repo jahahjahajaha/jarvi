@@ -10,7 +10,7 @@ module.exports = {
   usage: "<song name / URL>",
   permission: [],
   owner: false,
-  voteonly: false,
+  botonly: false,
   player: false,
   inVoiceChannel: true,
   sameVoiceChannel: true,

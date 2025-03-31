@@ -7,6 +7,7 @@ const {
     StringSelectMenuOptionBuilder
 } = require('discord.js');
 const lodash = require("lodash");
+const { checkDevRole } = require("../../utils/roleCheck");
 
 module.exports = {
     name: "serverlist",
@@ -16,8 +17,18 @@ module.exports = {
     args: false,
     usage: "[sort:members/name/id/age] [search:term]",
     permission: [],
-    owner: true,
+    devOnly: true,
     execute: async (message, args, client, prefix) => {
+        // Check for dev role
+        if (!checkDevRole(message.member)) {
+            return message.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#FF0000')
+                        .setDescription('❌ | Only developers can use this command!')
+                ]
+            });
+        }
         // Parse arguments for sorting and filtering
         let sortMethod = "default";
         let searchTerm = "";

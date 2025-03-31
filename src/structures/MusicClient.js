@@ -10,7 +10,7 @@ const mongoose = require('mongoose');
 const moment = require('moment-timezone');
 require("./PlayerBase"); 
 require("../utils/lavamusic");
-const StatusMonitor = require("../utils/statusMonitor");
+const SimpleStatusMonitor = require("../utils/simpleStatusMonitor");
 
 class MusicBot extends Client {
     constructor() {
@@ -281,7 +281,7 @@ class MusicBot extends Client {
                         global._statusMonitorInitialized = true;
                         
                         // Create and initialize just once
-                        this.statusMonitor = new StatusMonitor(this);
+                        this.statusMonitor = SimpleStatusMonitor.getInstance(this);
                         
                         // Initialize the status monitor (happens asynchronously)
                         this.statusMonitor.init().catch(error => {

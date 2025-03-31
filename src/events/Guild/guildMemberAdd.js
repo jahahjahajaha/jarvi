@@ -16,8 +16,8 @@ module.exports = {
             // Skip if it's a bot (unless we want to welcome bots too)
             if (member.user.bot) return;
             
-            // Check if join channel exists
-            const joinChannel = await client.channels.fetch(config.logs.join).catch(() => null);
+            // Check if join channel exists (member join channel for SUPPORT server)
+            const joinChannel = await client.channels.fetch('1335329530885308539').catch(() => null);
             if (!joinChannel) {
                 return client.logger.log("Support server welcome channel not found!", "error");
             }
@@ -115,18 +115,18 @@ module.exports = {
                 new ButtonBuilder()
                     .setLabel('Rules')
                     .setStyle(ButtonStyle.Link)
-                    .setURL(`https://discord.com/channels/${config.bot.supportServerID}/${config.supportServer?.rules || '1335329531262668801'}/rules`)
+                    .setURL(`https://discord.com/channels/1335329530121945139/1335330915479584809`)
                     .setEmoji('📜'),
                 new ButtonBuilder()
-                    .setLabel('Commands')
+                    .setLabel('Music')
                     .setStyle(ButtonStyle.Link)
-                    .setURL(`https://discord.com/channels/${config.bot.supportServerID}/${config.supportServer?.commands || '1335329530734186534'}`)
-                    .setEmoji('🤖'),
+                    .setURL(`https://discord.com/channels/1335329530121945139/1335329531069988974`)
+                    .setEmoji('🎵'),
                 new ButtonBuilder()
                     .setLabel('Invite Bot')
                     .setStyle(ButtonStyle.Link)
-                    .setURL(config.bot.invite || 'https://discord.com/oauth2/authorize?client_id=1333994486979887186&permissions=8&scope=bot%20applications.commands')
-                    .setEmoji('🎵')
+                    .setURL(config.bot.inviteURL || "https://discord.com/oauth2/authorize?client_id=1333994486979887186&permissions=8&scope=bot%20applications.commands")
+                    .setEmoji('🤖')
             );
             
             // Send welcome message with animations and styling
@@ -156,7 +156,7 @@ module.exports = {
                         .setTimestamp();
                     
                     await modChannel.send({ 
-                        content: `<@&${config.supportServer?.modRole || '1335329531262668800'}> Please review this new member.`,
+                        content: `<@&1335329531262668800> Please review this new member.`,
                         embeds: [alertEmbed] 
                     });
                 }

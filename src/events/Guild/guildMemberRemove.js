@@ -16,8 +16,8 @@ module.exports = {
             // Skip if it's a bot (unless we want to log bot leaves too)
             if (member.user.bot) return;
             
-            // Check if leave channel exists
-            const leaveChannel = await client.channels.fetch(config.logs.leave).catch(() => null);
+            // Check if leave channel exists (member leave channel for SUPPORT server)
+            const leaveChannel = await client.channels.fetch('1335329530885308539').catch(() => null);
             if (!leaveChannel) {
                 return client.logger.log("Support server goodbye channel not found!", "error");
             }

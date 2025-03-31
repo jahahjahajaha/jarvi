@@ -85,22 +85,30 @@ module.exports = class Logger {
     static getChannelIdForLogType(type) {
         type = type.toLowerCase();
         
-        // Use an object lookup for better performance
-        const channelMap = {
-            'error': config.logs.error,
-            'warn': config.logs.warning,
-            'ready': config.logs.general,
-            'info': config.logs.general,
-            'log': config.logs.general,
-            'join': config.logs.join,
-            'leave': config.logs.leave,
-            'console': config.logs.console,
-            'boost': config.logs.boost,
-            'serverjoin': config.logs.serverjoinleave,
-            'serverleave': config.logs.serverjoinleave
-        };
-        
-        return channelMap[type] || config.logs.logChannelId;
+        // Map log types to their respective channels
+        switch (type) {
+            case "error":
+                return config.logs.error;
+            case "warn":
+                return config.logs.warning; // New dedicated warning channel
+            case "ready":
+            case "info":
+            case "log":
+                return config.logs.general;
+            case "join":
+                return config.logs.join;
+            case "leave":
+                return config.logs.leave;
+            case "console":
+                return config.logs.console;
+            case "boost":
+                return config.logs.boost;
+            case "serverjoin":
+            case "serverleave":
+                return config.logs.serverjoinleave;
+            default:
+                return config.logs.logChannelId; // Default general logs
+        }
     }
     
     /**
@@ -262,31 +270,57 @@ module.exports = class Logger {
         }
         
         // Console logging with chalk colors and emojis for better readability
-        // Use lookup map for better performance
-        const typeConfig = {
-            "log": { bgcolor: chalk.black.bgBlue, emoji: "", label: "LOG" },
-            "warn": { bgcolor: chalk.black.bgYellow, emoji: "⚠️ ", label: "WARN" },
-            "error": { bgcolor: chalk.black.bgRed, emoji: "❌ ", label: "ERROR" },
-            "debug": { bgcolor: chalk.black.bgGreen, emoji: "🔍 ", label: "DEBUG" },
-            "cmd": { bgcolor: chalk.black.bgWhite, emoji: "🔧 ", label: "CMD" },
-            "event": { bgcolor: chalk.black.bgWhite, emoji: "📊 ", label: "EVENT" },
-            "ready": { bgcolor: chalk.black.bgBlueBright, emoji: "✅ ", label: "READY" },
-            "info": { bgcolor: chalk.black.bgCyan, emoji: "ℹ️ ", label: "INFO" },
-            "join": { bgcolor: chalk.black.bgGreen, emoji: "➕ ", label: "JOIN" },
-            "leave": { bgcolor: chalk.black.bgRed, emoji: "➖ ", label: "LEAVE" },
-            "boost": { bgcolor: chalk.black.bgMagenta, emoji: "🚀 ", label: "BOOST" }
-        };
-        
-        // Get config for this type or use default
-        const lowerType = type.toLowerCase();
-        const config = typeConfig[lowerType] || { 
-            bgcolor: chalk.black.bgWhite, 
-            emoji: "📝 ", 
-            label: type.toUpperCase() 
-        };
-        
-        // Create formatted log string
-        const consoleLog = `[${chalk.gray(date)}]: [${config.bgcolor(config.label)}] ${config.emoji}${formattedContent}`;
+        let consoleLog;
+        switch (type.toLowerCase()) {
+            case "log": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgBlue(type.toUpperCase())}] ${formattedContent}`;
+                break;
+            }
+            case "warn": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgYellow(type.toUpperCase())}] ⚠️ ${formattedContent}`;
+                break;
+            }
+            case "error": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgRed(type.toUpperCase())}] ❌ ${formattedContent}`;
+                break;
+            }
+            case "debug": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgGreen(type.toUpperCase())}] 🔍 ${formattedContent}`;
+                break;
+            }
+            case "cmd": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgWhite(type.toUpperCase())}] 🔧 ${formattedContent}`;
+                break;
+            }
+            case "event": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgWhite(type.toUpperCase())}] 📊 ${formattedContent}`;
+                break;
+            }
+            case "ready": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgBlueBright(type.toUpperCase())}] ✅ ${formattedContent}`;
+                break;
+            }
+            case "info": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgCyan(type.toUpperCase())}] ℹ️ ${formattedContent}`;
+                break;
+            }
+            case "join": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgGreen("JOIN")}] ➕ ${formattedContent}`;
+                break;
+            }
+            case "leave": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgRed("LEAVE")}] ➖ ${formattedContent}`;
+                break;
+            }
+            case "boost": {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgMagenta("BOOST")}] 🚀 ${formattedContent}`;
+                break;
+            }
+            default: {
+                consoleLog = `[${chalk.gray(date)}]: [${chalk.black.bgWhite(type.toUpperCase())}] 📝 ${formattedContent}`;
+                break;
+            }
+        }
         
         // Log to console
         console.log(consoleLog);
@@ -358,7 +392,7 @@ module.exports = class Logger {
             const embed = new EmbedBuilder()
                 .setColor('#44ff44')
                 .setAuthor({ 
-                    name: `📥 ${this.client.user.username} joined a New Server!`, 
+                    name: `📥 Jarvi joined a New Server!`, 
                     iconURL: this.client.user.displayAvatarURL() 
                 })
                 .setThumbnail(guild.iconURL({ dynamic: true, size: 1024 }) || this.client.user.displayAvatarURL())
@@ -439,7 +473,7 @@ module.exports = class Logger {
             const embed = new EmbedBuilder()
                 .setColor('#F75C5C')
                 .setAuthor({ 
-                    name: `📤 ${this.client.user.username} left a Server!`, 
+                    name: `📤 Jarvi left a Server!`, 
                     iconURL: this.client.user.displayAvatarURL() 
                 })
                 .setThumbnail(guild.iconURL({ dynamic: true, size: 1024 }) || this.client.user.displayAvatarURL())

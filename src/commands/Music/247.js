@@ -10,7 +10,7 @@ module.exports = {
   usage: "",
   permission: [],
   owner: false,
-  voteonly: false,
+  botonly: false,
   player: true,
   inVoiceChannel: true,
   sameVoiceChannel: true,

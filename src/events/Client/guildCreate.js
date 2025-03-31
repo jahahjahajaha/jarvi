@@ -10,8 +10,8 @@ module.exports = {
     name: "guildCreate",
     async run(client, guild) {
         try {
-            // Get the server join notification channel from config
-            const logChannel = await client.channels.fetch(config.logs.serverjoinleave).catch(() => null);
+            // Get the server join notification channel from config (BOT joined new server)
+            const logChannel = await client.channels.fetch('1335329531262668803').catch(() => null);
             if (!logChannel) {
                 return client.logger.log("Server join notification channel not found!", "error");
             }
@@ -48,10 +48,14 @@ module.exports = {
 
             // Fetching Inviter (If Available)
             let inviter = "Unknown";
+            let inviterId = null;
             try {
                 const auditLogs = await guild.fetchAuditLogs({ type: 28, limit: 1 }); // 28 is BOT_ADD
                 const entry = auditLogs.entries.first();
-                if (entry) inviter = `${entry.executor.tag} (${entry.executor.id})`;
+                if (entry) {
+                    inviterId = entry.executor.id;
+                    inviter = `[${entry.executor.tag}](https://discord.com/users/${entry.executor.id})`;
+                }
             } catch (err) {
                 client.logger.log(`Failed to fetch inviter for ${guild.name}: ${err.message}`, "warn");
             }
