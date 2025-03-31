@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#E87147" />
+  <circle cx="100" cy="100" r="85" fill="#1E2124" />
+  
+  <!-- Headphones -->
+  <path d="M155,100 A55,55 0 0,0 45,100" stroke="#E87147" stroke-width="8" fill="none" />
+  
+  <!-- Left earpiece -->
+  <rect x="39" y="90" width="15" height="40" rx="5" ry="5" fill="#E87147" />
+  <rect x="36" y="95" width="5" height="30" rx="2" ry="2" fill="#E87147" />
+  
+  <!-- Right earpiece -->
+  <rect x="146" y="90" width="15" height="40" rx="5" ry="5" fill="#E87147" />
+  <rect x="159" y="95" width="5" height="30" rx="2" ry="2" fill="#E87147" />
+  
+  <!-- Musical note -->
+  <path d="M100,70 L100,120 Q100,135 85,135 Q70,135 70,120 Q70,105 85,105 Q90,105 95,110 L95,75 L115,65 L115,90" fill="#E87147" />
+  <ellipse cx="115" cy="90" rx="8" ry="6" fill="#E87147" />
+  
+  <!-- Text -->
+  <text x="100" y="165" font-family="Arial, sans-serif" font-weight="bold" font-size="24" text-anchor="middle" fill="#E87147">JARVI</text>
+</svg>
