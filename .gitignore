@@ -1,8 +1,10 @@
 # Environment variables
 .env
-.env.*
 copy.env
 *.env
+
+# Keep example environment file
+!.env.example
 
 # Node modules
 node_modules/
